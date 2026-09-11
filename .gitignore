@@ -1,0 +1,79 @@
+# ==============================================================================
+# SIH 2026 Problem Statement 26168 — Intelligent Dead Reckoning (IDR) System
+# Official .gitignore Configuration for Public GitHub Repository
+# ==============================================================================
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter / IPython Notebook Checkpoints
+.ipynb_checkpoints
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# IDE & OS Metadata
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Large Binary Data & Datasets Archives (>100MB)
+*.zip
+IO-VNBD/*.zip
+data/raw/
+*.tar.gz
+*.7z
+
+# Intermediate ML Prediction Dumps & Binary Caches
+results/*.npz
+results/**/*.npz
+data/ml_dataset/*.npz
+!data/ml_dataset/vw4_ml_dataset_w40.npz
+
+# Scratch Scripts & Intermediate Reports
+scratch/
+notes/
+*.log
+
+# Large Document Binaries
+*.docx
+scratch/*.ttf
+docs/*.pdf
+model_evolution_report/*.pdf
+model_evolution_report/*.docx
+M040-M052_RESEARCH_PROGRESSION.docx

@@ -1,0 +1,72 @@
+{
+  "scenario_id": "case_03_urban_canyon",
+  "title": "CASE 03 \u2014 DEEP URBAN CANYON",
+  "subtitle": "GNSS-Degraded & GNSS-Denied Navigation between High-Rise Glass Skyscraper Towers (DLF Cyber City Financial District)",
+  "environment": {
+    "type": "Deep Urban Canyon / Skyscraper Financial District",
+    "location_name": "DLF Cyber City & MG Road Corridor (Gurugram NCR)",
+    "lat_center": 28.495,
+    "lon_center": 77.088,
+    "building_heights": "80m - 140m High-Rise Glass Towers",
+    "gnss_condition": "SIMULATED URBAN MULTIPATH DEGRADATION & SKYVIEW DENIAL"
+  },
+  "navigation_engine": {
+    "name": "M028 Production Pipeline",
+    "speed_model": "SpeedNet v2 (W=40, CNN+BiLSTM)",
+    "orientation": "Raw Gyro Yaw Integration",
+    "kinematic_constraint": "Fixed 2D NHC (R_nhc = 0.04)",
+    "filter": "7-State ENU Extended Kalman Filter",
+    "speed_bound": "M013 F4 Confidence-Gated Physical Bound",
+    "zupt": "M014 F3 Zero-Velocity Update (P(stat) > 0.70)",
+    "apm": "M019 F4 Acceleration-Integrated Pseudo-Measurement (delta_v = 0.50 m/s)",
+    "jerk_gate": "M028 F2 Zero-Latency IMU Jerk Gate (j_long < -1.00 m/s^3)",
+    "locked_benchmark": {
+      "err_60s_m": 27.35,
+      "err_120s_m": 426.85,
+      "err_300s_m": 218.93,
+      "err_1km_m": 307.46,
+      "max_compliant_dist_m": 491.5
+    }
+  },
+  "timeline": {
+    "total_duration_sec": 300.0,
+    "gnss_aided_pre_outage_sec": 20.0,
+    "gnss_degraded_sec": 20.0,
+    "gnss_outage_start_sec": 40.0,
+    "gnss_outage_end_sec": 260.0,
+    "gnss_outage_duration_sec": 220.0,
+    "gnss_aided_post_outage_sec": 40.0
+  },
+  "waypoints": {
+    "start": {
+      "lat": 28.49,
+      "lon": 77.082,
+      "name": "Open MG Road Boulevard (GNSS Online)"
+    },
+    "urban_degraded": {
+      "lat": 28.4925,
+      "lon": 77.085,
+      "name": "Skyscraper Shadow Entrance (GNSS Degraded / Multipath)"
+    },
+    "canyon_entry": {
+      "lat": 28.494,
+      "lon": 77.087,
+      "name": "Deep Urban Canyon Corridor (GNSS Blackout Start)"
+    },
+    "urban_intersection": {
+      "lat": 28.4965,
+      "lon": 77.0895,
+      "name": "Skyscraper Traffic Intersection (Red Light Stop / ZUPT Active)"
+    },
+    "canyon_exit": {
+      "lat": 28.499,
+      "lon": 77.093,
+      "name": "Urban Canyon Boundary Exit (GNSS Signal Reacquiring)"
+    },
+    "destination": {
+      "lat": 28.502,
+      "lon": 77.096,
+      "name": "Open Boulevard Clearing (GNSS Restored)"
+    }
+  }
+}

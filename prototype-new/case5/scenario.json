@@ -1,0 +1,72 @@
+{
+  "scenario_id": "case_05_gnss_jamming",
+  "title": "CASE 05 \u2014 GNSS JAMMING / INTERFERENCE",
+  "subtitle": "Software-Simulated GNSS Measurement Suppression & Interference Event (Yamuna Expressway Corridor)",
+  "environment": {
+    "type": "Open Expressway / Simulated RF Interference Zone",
+    "location_name": "Yamuna Expressway & Outer Ring Road Corridor (New Delhi NCR)",
+    "lat_center": 28.55,
+    "lon_center": 77.28,
+    "gnss_mode": "simulated_interference",
+    "gnss_condition": "SOFTWARE-SIMULATED GNSS MEASUREMENT SUPPRESSION"
+  },
+  "navigation_engine": {
+    "name": "M028 Production Pipeline",
+    "speed_model": "SpeedNet v2 (W=40, CNN+BiLSTM)",
+    "orientation": "Raw Gyro Yaw Integration",
+    "kinematic_constraint": "Fixed 2D NHC (R_nhc = 0.04)",
+    "filter": "7-State ENU Extended Kalman Filter",
+    "speed_bound": "M013 F4 Confidence-Gated Physical Bound",
+    "zupt": "M014 F3 Zero-Velocity Update (P(stat) > 0.70)",
+    "apm": "M019 F4 Acceleration-Integrated Pseudo-Measurement (delta_v = 0.50 m/s)",
+    "jerk_gate": "M028 F2 Zero-Latency IMU Jerk Gate (j_long < -1.00 m/s^3)",
+    "locked_benchmark": {
+      "err_60s_m": 27.35,
+      "err_120s_m": 426.85,
+      "err_300s_m": 218.93,
+      "err_1km_m": 307.46,
+      "max_compliant_dist_m": 491.5
+    }
+  },
+  "timeline": {
+    "total_duration_sec": 300.0,
+    "gnss_aided_pre_outage_sec": 20.0,
+    "gnss_degraded_sec": 15.0,
+    "gnss_outage_start_sec": 35.0,
+    "gnss_outage_end_sec": 255.0,
+    "gnss_outage_duration_sec": 220.0,
+    "gnss_aided_post_outage_sec": 45.0
+  },
+  "waypoints": {
+    "start": {
+      "lat": 28.53,
+      "lon": 77.26,
+      "name": "Open Expressway Approach (GNSS Online)"
+    },
+    "interference_start": {
+      "lat": 28.542,
+      "lon": 77.272,
+      "name": "Simulated Interference Event Start (GNSS Degraded)"
+    },
+    "jamming_zone": {
+      "lat": 28.55,
+      "lon": 77.28,
+      "name": "Software Measurement Denial Zone (GNSS Blackout Start)"
+    },
+    "highway_stop": {
+      "lat": 28.562,
+      "lon": 77.292,
+      "name": "Highway Traffic Bottleneck (ZUPT Active)"
+    },
+    "interference_end": {
+      "lat": 28.578,
+      "lon": 77.308,
+      "name": "Interference Event End (GNSS Signal Reacquiring)"
+    },
+    "destination": {
+      "lat": 28.586,
+      "lon": 77.316,
+      "name": "Expressway Clearing (GNSS Restored)"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "scenario_id": "case_06_planetary_nav",
+  "title": "CASE 06 \u2014 PLANETARY / DEEP-SPACE NAVIGATION",
+  "subtitle": "GNSS-Independent Navigation Concept Demonstration (Mars Jezero Crater Delta Exploration)",
+  "environment": {
+    "type": "Planetary Surface / Deep-Space Transit",
+    "location_name": "Mars Jezero Crater Delta Exploration Corridor",
+    "lat_center": 18.38,
+    "lon_center": 77.58,
+    "gnss_mode": "gnss_independent_planetary_concept",
+    "gnss_condition": "GNSS NOT AVAILABLE (BEYOND EARTH INFRASTRUCTURE)"
+  },
+  "navigation_engine": {
+    "name": "M028 Terrestrial Concept Adapter",
+    "speed_model": "SpeedNet v2 (W=40, CNN+BiLSTM)",
+    "orientation": "Raw Gyro Yaw Integration",
+    "kinematic_constraint": "Fixed 2D NHC (R_nhc = 0.04)",
+    "filter": "7-State ENU Extended Kalman Filter",
+    "speed_bound": "M013 F4 Confidence-Gated Physical Bound",
+    "zupt": "M014 F3 Zero-Velocity Update (P(stat) > 0.70)",
+    "apm": "M019 F4 Acceleration-Integrated Pseudo-Measurement (delta_v = 0.50 m/s)",
+    "jerk_gate": "M028 F2 Zero-Latency IMU Jerk Gate (j_long < -1.00 m/s^3)",
+    "locked_benchmark": {
+      "err_60s_m": 27.35,
+      "err_120s_m": 426.85,
+      "err_300s_m": 218.93,
+      "err_1km_m": 307.46,
+      "max_compliant_dist_m": 491.5
+    }
+  },
+  "timeline": {
+    "total_duration_sec": 300.0,
+    "earth_launch_sec": 20.0,
+    "space_transit_sec": 20.0,
+    "planetary_landing_sec": 40.0,
+    "planetary_outage_end_sec": 260.0,
+    "landmark_update_sec": 10.0,
+    "planetary_post_update_sec": 30.0
+  },
+  "waypoints": {
+    "start": {
+      "lat": 18.36,
+      "lon": 77.56,
+      "name": "Earth Launch Departure (GNSS Available)"
+    },
+    "space_transit": {
+      "lat": 18.37,
+      "lon": 77.57,
+      "name": "Deep Space Transit (GNSS Not Available)"
+    },
+    "planetary_landing": {
+      "lat": 18.38,
+      "lon": 77.58,
+      "name": "Mars Jezero Crater Landing (Surface DR Active)"
+    },
+    "scientific_sample": {
+      "lat": 18.392,
+      "lon": 77.592,
+      "name": "Delta Rock Core Sample Stop (ZUPT Active)"
+    },
+    "orbital_landmark": {
+      "lat": 18.405,
+      "lon": 77.605,
+      "name": "Simulated Orbital Landmark Update (Map Alignment)"
+    },
+    "destination": {
+      "lat": 18.412,
+      "lon": 77.612,
+      "name": "Crater Rim Traverse Finish (Continuous DR)"
+    }
+  }
+}
