@@ -10,9 +10,9 @@
 - **Production Status:** **100% UNCHANGED** (Locked at M028 baseline).
 
 ## 2. Axis & Sign Audit Findings
-- $a_{\text{long}} = -(\text{raw\_ay} - \text{grav\_y})$
-- $a_{\text{lat}} = \text{raw\_ax} - \text{grav\_x}$
-- $\omega_{\text{yaw}} = -\text{gyro\_pitch}$
+- $a_{\text{long}} = -(a_{y,\text{raw}} - g_y)$
+- $a_{\text{lat}} = a_{x,\text{raw}} - g_x$
+- $\omega_{\text{yaw}} = -\omega_{\text{pitch}}$
 - Operational Speed Source: $v_{\text{net}}$ (SpeedNet v2 output, m/s).
 
 ## 3. Results Summary Table

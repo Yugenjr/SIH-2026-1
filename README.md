@@ -127,7 +127,7 @@ flowchart TD
 ### 4.1. Preprocessing & Sensor Alignment
 Raw accelerometer signals contain gravitational contamination. Preprocessing separates gravity vectors $\mathbf{g}$ from linear vehicle body acceleration $\mathbf{a}_{\text{body}}$:
 
-$$a_{\text{long}} = -(\text{raw\_ay} - \text{grav\_y}), \quad a_{\text{lat}} = \text{raw\_ax} - \text{grav\_x}$$
+$$a_{\text{long}} = -(a_{y,\text{raw}} - g_y), \quad a_{\text{lat}} = a_{x,\text{raw}} - g_x$$
 
 Longitudinal jerk $j_{\text{long}}$ is calculated causally from sequential acceleration samples ($\Delta t = 0.1\text{s}$ at 10 Hz):
 
