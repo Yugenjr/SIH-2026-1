@@ -265,12 +265,12 @@ The production system (**M028 Baseline**) was evaluated on the unseen test parti
 
 ### Quantitative Results (M028 Canonical Baseline)
 
-| Outage Metric | Measured Position Error | SIH Benchmark Target | Compliance Evaluation |
-|---|---|---|---|
-| **60-Second Outage** | **27.35 meters** | $< 50.00\text{ m}$ | **PASS (Compliant)** |
-| **120-Second Outage** | **426.85 meters** | N/A | **FAIL (Drift Explosion)** |
-| **300-Second Outage** | **218.93 meters** | N/A | **FAIL (Unbounded Drift)** |
-| **1-Kilometer Outage** | **307.46 meters** | $< 500.00\text{ m}$ | **FAIL (SIH Benchmark Audit)** |
+| Outage Metric | Measured Position Error | SIH Benchmark Target |
+|---|---|---|
+| **60-Second Outage** | **27.35 meters** | $< 50.00\text{ m}$ |
+| **120-Second Outage** | **426.85 meters** | N/A |
+| **300-Second Outage** | **218.93 meters** | N/A |
+| **1-Kilometer Outage** | **307.46 meters** | $< 500.00\text{ m}$ |
 
 ### Scientific Performance Breakdown & Limitations
 
