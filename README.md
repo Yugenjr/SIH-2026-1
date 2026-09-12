@@ -14,8 +14,8 @@ An AI-assisted smartphone inertial dead-reckoning prototype with GNSS transition
 | **Speed Engine** | SpeedNet v2 (Window $W=40$, 1D-CNN + BiLSTM Multi-Task Neural Network) | **VALIDATED** |
 | **Inertial Sensors** | Low-Cost Smartphone MEMS Accelerometer & Gyroscope | **VALIDATED** |
 | **Estimator Core** | 7-State ENU Extended Kalman Filter (EKF) | **VALIDATED** |
-| **Kinematic Constraint** | Fixed 2D Non-Holonomic Constraint ($v_{\text{lat}} \approx 0, R_{\text{nhc}} = 0.04$) | **VALIDATED** |
-| **Motion Correction** | Causal IMU Jerk-Gated APM ($j_{\text{long}} < -1.0\text{ m/s}^3, \delta v = 0.50\text{ m/s}$) | **VALIDATED (M028)** |
+| **Kinematic Constraint** | Fixed 2D Non-Holonomic Constraint ($v_\text{lat} \approx 0, R_\text{nhc} = 0.04$) | **VALIDATED** |
+| **Motion Correction** | Causal IMU Jerk-Gated APM ($j_\text{long} < -1.0\text{ m/s}^3, \delta v = 0.50\text{ m/s}$) | **VALIDATED (M028)** |
 | **Interactive Showcase** | Scenario-Based Web Prototype (Cases 01–06: Forest, Tunnel, Canyon, etc.) | **SIMULATED** |
 | **60-Second Outage Benchmark** | **27.35 meters** | **PASS** (SIH Target: $< 50.00\text{ m}$) |
 | **120-Second Outage Benchmark** | **426.85 meters** | **FAIL** (Drift accumulation identified) |
@@ -50,9 +50,9 @@ Consumer smartphones contain micro-electro-mechanical systems (MEMS) Inertial Me
 
 To overcome the exponential drift of standalone MEMS integration without relying on external hardware, our system adopts a **hybrid multi-tier navigation architecture**:
 
-> [!TIP]
-> **Core Navigation Principle**
-> $$ \text{Physical Sensors} + \text{Neural Inference} + \text{Kinematic Constraints} + \text{Probabilistic EKF} + \text{Causal Jerk Gating} $$
+```math
+\text{Physical Sensors} + \text{Neural Inference} + \text{Kinematic Constraints} + \text{Probabilistic EKF} + \text{Causal Jerk Gating}
+```
 
 ```
                                ┌───────────────────────────────────────────────┐
@@ -72,8 +72,8 @@ To overcome the exponential drift of standalone MEMS integration without relying
 - **IMU Alone Drifts**: Integrating raw acceleration explodes position error within seconds.
 - **ML Alone Lacks Kinematic Bounds**: Pure end-to-end neural networks cannot guarantee physical state continuity, energy conservation, or zero-velocity stops.
 - **EKF Alone Cannot Regress Speed**: Standard EKFs require velocity measurements; integrating noisy accelerometers in an EKF leads to severe bias divergence.
-- **Kinematic Constraints (NHC) Restrain Lateral Motion**: Land vehicles roll along their longitudinal axis without sliding sideways ($v_{\text{lat}} \approx 0$).
-- **Causal Jerk Gating Prevents Overshoot**: Neural networks lag during hard deceleration. Gating updates via longitudinal IMU jerk ($j_{\text{long}}$) eliminates velocity over-estimation during braking.
+- **Kinematic Constraints (NHC) Restrain Lateral Motion**: Land vehicles roll along their longitudinal axis without sliding sideways ($v_\text{lat} \approx 0$).
+- **Causal Jerk Gating Prevents Overshoot**: Neural networks lag during hard deceleration. Gating updates via longitudinal IMU jerk ($j_\text{long}$) eliminates velocity over-estimation during braking.
 
 ---
 
@@ -127,17 +127,21 @@ flowchart TD
 ## 4. Component-by-Component Technical Breakdown
 
 ### 4.1. Preprocessing & Sensor Alignment
-Raw accelerometer signals contain gravitational contamination. Preprocessing separates gravity vectors $\mathbf{g}$ from linear vehicle body acceleration $\mathbf{a}_{\text{body}}$:
+Raw accelerometer signals contain gravitational contamination. Preprocessing separates gravity vectors $\mathbf{g}$ from linear vehicle body acceleration $\mathbf{a}_\text{body}$:
 
-> [!NOTE]
-> **Formulas — Linear Body Acceleration & Causal Jerk Calculation**
-> $$ a_{\text{long}} = -(a_{y,\text{raw}} - g_y), \quad a_{\text{lat}} = a_{x,\text{raw}} - g_x $$
-> $$ j_{\text{long}}[k] = \frac{a_{\text{long}}[k] - a_{\text{long}}[k-1]}{\Delta t} $$
->
-> - $a_{y,\text{raw}}, a_{x,\text{raw}}$: Raw accelerometer readings along body axes (m/s²).
-> - $g_y, g_x$: Gravity component vector estimates derived from attitude orientation (m/s²).
-> - $a_{\text{long}}, a_{\text{lat}}$: Purified vehicle longitudinal and lateral linear accelerations (m/s²).
-> - $j_{\text{long}}[k]$: Discrete longitudinal IMU jerk computed causally over sampling step $\Delta t = 0.1\text{ s}$ (10 Hz).
+```math
+a_\text{long} = -(a_{y,\text{raw}} - g_y), \quad a_\text{lat} = a_{x,\text{raw}} - g_x
+```
+
+```math
+j_\text{long}[k] = \frac{a_\text{long}[k] - a_\text{long}[k-1]}{\Delta t}
+```
+
+**Variable Definitions**:
+- $a_{y,\text{raw}}, a_{x,\text{raw}}$: Raw accelerometer readings along body Y and X axes (m/s²).
+- $g_y, g_x$: Gravity component vector estimates derived from vehicle attitude orientation (m/s²).
+- $a_\text{long}, a_\text{lat}$: Purified vehicle longitudinal (forward) and lateral (transverse) linear accelerations (m/s²).
+- $j_\text{long}[k]$: Discrete longitudinal IMU jerk computed causally over sampling interval $\Delta t = 0.1\text{ s}$ (10 Hz).
 
 ---
 
@@ -147,8 +151,8 @@ SpeedNet v2 is a temporal multi-task neural network trained on normalized 6-axis
 - **Feature Extractor**: 2-layer 1D CNN (32 $\to$ 64 filters) extracting short-term temporal dynamics.
 - **Context Recurrent Layer**: Single-layer Bidirectional LSTM (hidden dimension 64) modeling long-range temporal trends.
 - **Multi-Task Heads**:
-  1. Forward Speed Regression Head ($v_{\text{net}} \ge 0\text{ m/s}$, ReLU activated).
-  2. Vehicle Yaw Rate Regression Head ($\omega_{\text{yaw}}$ in $\text{rad/s}$).
+  1. Forward Speed Regression Head ($v_\text{net} \ge 0\text{ m/s}$, ReLU activated).
+  2. Vehicle Yaw Rate Regression Head ($\omega_\text{yaw}$ in $\text{rad/s}$).
   3. Stationary Classification Head ($P(\text{stat}) \in [0, 1]$, Sigmoid logit output).
   4. Auxiliary Velocity Change Head ($\Delta v$).
 
@@ -157,65 +161,85 @@ SpeedNet v2 is a temporal multi-task neural network trained on normalized 6-axis
 ### 4.3. 7-State ENU Extended Kalman Filter (EKF)
 The filter estimates 7 kinematic navigation states in local East-North-Up (ENU) coordinates:
 
-> [!NOTE]
-> **Formulas — EKF State Vector & Kinematic Motion Integration**
-> $$ \mathbf{x} = \begin{bmatrix} x & y & v_x & v_y & \psi & b_a & b_\omega \end{bmatrix}^T $$
-> $$ \begin{aligned} \psi[k] &= \psi[k-1] + (\omega_z - b_\omega) \Delta t \\ \mathbf{v}[k] &= \mathbf{v}[k-1] + \mathbf{R}_b^n (\mathbf{a}_{\text{imu}} - b_a) \Delta t \\ \mathbf{p}[k] &= \mathbf{p}[k-1] + \mathbf{v}[k] \Delta t \end{aligned} $$
->
-> - $(x, y)$: Local East-North-Up (ENU) coordinates (m).
-> - $(v_x, v_y)$: ENU linear velocity vector components (m/s).
-> - $\psi$: Vehicle yaw / heading angle relative to True North (rad).
-> - $b_a$: Estimated longitudinal accelerometer bias (m/s²).
-> - $b_\omega$: Estimated gyroscope yaw rate drift (rad/s).
-> - $\mathbf{R}_b^n$: 2D body-to-navigation frame direction cosine transformation matrix:
->   $$ \mathbf{R}_b^n = \begin{bmatrix} \sin \psi & \cos \psi \\ \cos \psi & -\sin \psi \end{bmatrix} $$
+```math
+\mathbf{x} = \begin{bmatrix} x & y & v_x & v_y & \psi & b_a & b_\omega \end{bmatrix}^T
+```
+
+```math
+\begin{aligned} 
+\psi[k] &= \psi[k-1] + (\omega_z - b_\omega) \Delta t \\ 
+\mathbf{v}[k] &= \mathbf{v}[k-1] + \mathbf{R}_b^n (\mathbf{a}_\text{imu} - b_a) \Delta t \\ 
+\mathbf{p}[k] &= \mathbf{p}[k-1] + \mathbf{v}[k] \Delta t 
+\end{aligned}
+```
+
+```math
+\mathbf{R}_b^n = \begin{bmatrix} \sin \psi & \cos \psi \\ \cos \psi & -\sin \psi \end{bmatrix}
+```
+
+**Variable Definitions**:
+- $(x, y)$: Local East-North-Up (ENU) position coordinates (m).
+- $(v_x, v_y)$: ENU linear velocity vector components (m/s).
+- $\psi$: Vehicle yaw / heading angle relative to True North (rad).
+- $b_a$: Estimated longitudinal accelerometer bias (m/s²).
+- $b_\omega$: Estimated gyroscope yaw rate drift (rad/s).
+- $\mathbf{R}_b^n$: 2D body-to-navigation frame direction cosine transformation matrix.
 
 ---
 
 ### 4.4. Fixed Non-Holonomic Constraint (NHC)
-Wheeled land vehicles obey physical motion constraints: under non-slipping conditions, velocity perpendicular to the drive direction is zero ($v_{\text{lat}} \approx 0$).
+Wheeled land vehicles obey physical motion constraints: under non-slipping conditions, velocity perpendicular to the drive direction is zero ($v_\text{lat} \approx 0$).
 
-> [!NOTE]
-> **Formula — Fixed 2D Non-Holonomic Constraint (NHC)**
-> $$ v_{\text{lat}} = v_x \cos \psi - v_y \sin \psi \approx 0 $$
->
-> - $v_{\text{lat}}$: Transverse velocity component orthogonal to the vehicle chassis direction.
-> - Measurement observation vector: $\mathbf{H}_{\text{nhc}} = \begin{bmatrix} 0 & 0 & \cos \psi & -\sin \psi & -v_x \sin \psi - v_y \cos \psi & 0 & 0 \end{bmatrix}$.
-> - Measurement noise variance: $R_{\text{nhc}} = 0.04\text{ m}^2/\text{s}^2$, constraining sideways position drift.
+```math
+v_\text{lat} = v_x \cos \psi - v_y \sin \psi \approx 0
+```
+
+**Variable Definitions**:
+- $v_\text{lat}$: Transverse velocity component orthogonal to the vehicle chassis direction.
+- Measurement observation vector: $\mathbf{H}_\text{nhc} = \begin{bmatrix} 0 & 0 & \cos \psi & -\sin \psi & -v_x \sin \psi - v_y \cos \psi & 0 & 0 \end{bmatrix}$.
+- Measurement noise variance: $R_\text{nhc} = 0.04\text{ m}^2/\text{s}^2$, constraining sideways position drift.
 
 ---
 
 ### 4.5. Causal IMU Jerk-Gated APM (M028 Canonical Mechanism)
 Neural speed regressors suffer from temporal smoothing during sudden braking, causing the network to over-estimate speed during deceleration. The **Adaptive Position/Velocity Correction Mechanism (APM)** detects braking via IMU jerk:
 
-> [!NOTE]
-> **Formulas — Jerk-Gated APM Activation & Speed Damping**
-> $$ a_{\text{long}}[k] < -0.5\text{ m/s}^2 \quad \text{AND} \quad |\omega_z[k]| \le 3.0^\circ/\text{s} \quad \text{AND} \quad j_{\text{long}}[k] < -1.0\text{ m/s}^3 $$
-> $$ z_{\text{apm}} = \max\left(0, v_{\text{est}}[k-5] + \sum_{i=k-4}^{k} a_{\text{long}}[i] \Delta t\right) $$
-> $$ v_{\text{meas}} = v_{\text{net}} - \min(v_{\text{net}} - z_{\text{apm}}, 0.50\text{ m/s}) $$
->
-> - $a_{\text{long}}[k] < -0.5\text{ m/s}^2$: Verifies longitudinal vehicle deceleration.
-> - $|\omega_z[k]| \le 3.0^\circ/\text{s}$: Ensures the vehicle is traveling straight (prevents turn interference).
-> - $j_{\text{long}}[k] < -1.0\text{ m/s}^3$: Causal jerk threshold gating hard braking events.
-> - $z_{\text{apm}}$: Speed anchor derived by integrating longitudinal IMU acceleration over a 5-sample window ($0.5\text{ s}$) relative to prior EKF speed $v_{\text{est}}[k-5]$.
-> - $\delta v_{\text{bound}} = 0.50\text{ m/s}$: Enforces a maximum correction damping limit ($1.8\text{ km/h}$).
+```math
+a_\text{long}[k] < -0.5\text{ m/s}^2 \quad \text{AND} \quad |\omega_z[k]| \le 3.0^\circ/\text{s} \quad \text{AND} \quad j_\text{long}[k] < -1.0\text{ m/s}^3
+```
+
+```math
+z_\text{apm} = \max\left(0, v_\text{est}[k-5] + \sum_{i=k-4}^{k} a_\text{long}[i] \Delta t\right)
+```
+
+```math
+v_\text{meas} = v_\text{net} - \min(v_\text{net} - z_\text{apm}, 0.50\text{ m/s})
+```
+
+**Variable Definitions**:
+- $a_\text{long}[k] < -0.5\text{ m/s}^2$: Verifies longitudinal vehicle deceleration.
+- $|\omega_z[k]| \le 3.0^\circ/\text{s}$: Ensures the vehicle is traveling straight (prevents turn interference).
+- $j_\text{long}[k] < -1.0\text{ m/s}^3$: Causal jerk threshold gating hard braking events.
+- $z_\text{apm}$: Speed anchor derived by integrating longitudinal IMU acceleration over a 5-sample window ($0.5\text{ s}$) relative to prior EKF speed $v_\text{est}[k-5]$.
+- $\delta v_\text{bound} = 0.50\text{ m/s}$: Enforces a maximum correction damping limit ($1.8\text{ km/h}$).
 
 ---
 
 ### 4.6. Stationary Detection & Zero-Velocity Updates (ZUPT)
 When SpeedNet predicts $P(\text{stat}) > 0.70$, the vehicle is classified as stationary. The system applies a Zero-Velocity Update (ZUPT):
 
-> [!NOTE]
-> **Formulas — Zero-Velocity Update (ZUPT)**
-> $$ \mathbf{z}_{\text{zupt}} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \quad \mathbf{H}_{\text{zupt}} = \begin{bmatrix} 0 & 0 & 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 & 0 & 0 \end{bmatrix} $$
->
-> - Applied when SpeedNet stationary probability satisfies $P(\text{stat}) > 0.70$.
-> - Directly observes velocity states $[v_x, v_y]^T = [0, 0]^T$ with measurement noise $R_z = 0.04\text{ m}^2/\text{s}^2$, resetting velocity integration error to zero during stops.
+```math
+\mathbf{z}_\text{zupt} = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, \quad \mathbf{H}_\text{zupt} = \begin{bmatrix} 0 & 0 & 1 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 1 & 0 & 0 & 0 \end{bmatrix}
+```
+
+**Variable Definitions**:
+- Applied when SpeedNet stationary probability satisfies $P(\text{stat}) > 0.70$.
+- Directly observes velocity states $[v_x, v_y]^T = [0, 0]^T$ with measurement noise $R_z = 0.04\text{ m}^2/\text{s}^2$, resetting velocity integration error to zero during stops.
 
 ---
 
 ### 4.7. GNSS Transition & Recovery Handling
-- **GNSS Available (Open Sky)**: The EKF executes full 5D updates ($\mathbf{z} = [x_{\text{gt}}, y_{\text{gt}}, v_{x,\text{gt}}, v_{y,\text{gt}}, \psi_{\text{gt}}]^T$), estimating sensor biases ($b_a, b_\omega$) and initializing state covariances.
+- **GNSS Available (Open Sky)**: The EKF executes full 5D updates ($\mathbf{z} = [x_\text{gt}, y_\text{gt}, v_{x,\text{gt}}, v_{y,\text{gt}}, \psi_\text{gt}]^T$), estimating sensor biases ($b_a, b_\omega$) and initializing state covariances.
 - **GNSS Outage Triggered**: Absolute GNSS updates cease instantly. The filter switches seamlessly to autonomous dead reckoning, fusing SpeedNet v2, NHC, and jerk-gated APM updates.
 - **GNSS Recovery**: When satellite signals reappear, the EKF resumes GNSS updates, re-bounding accumulated covariance $\mathbf{P}$ back to nominal GPS levels.
 
@@ -275,14 +299,14 @@ Our research encompasses **52 systematic milestones** documented in [`milestones
 
 - **M001–M006 (Baselines)**: Dataset preprocessing, 1D-CNN / LSTM training, SpeedNet v1/v2 initial formulations.
 - **M007–M013 (SpeedNet Evolution)**: Physical constraint losses, vehicle slip diagnostics, and SpeedNet v4 temporal context.
-- **M014–M027 (APM & ZUPT)**: Stationary detection ($P_{\text{stat}} > 0.70$), turn-aware speed attenuation, and pitch-tilt APM.
-- **M028 (CANONICAL PRODUCTION PIPELINE)**: Causal IMU Jerk-Gated APM ($j_{\text{long}} < -1.0\text{ m/s}^3$).
+- **M014–M027 (APM & ZUPT)**: Stationary detection ($P(\text{stat}) > 0.70$), turn-aware speed attenuation, and pitch-tilt APM.
+- **M028 (CANONICAL PRODUCTION PIPELINE)**: Causal IMU Jerk-Gated APM ($j_\text{long} < -1.0\text{ m/s}^3$).
 - **M029–M039 (Parameter Sensitivity)**: Jerk threshold sweeps, turn trajectory error attribution, and NIS consistency testing.
 - **M040–M052 (Audits & Counterfactual Studies)**:
   - **M040/M041**: Counterfactual consistency and SIH compliance audits.
   - **M043**: Mathematical proof of unobservable heading drift under 2D MEMS IMU.
   - **M050**: Learned body-frame velocity regression study (generalization failure on unseen test set).
-  - **M052**: Dynamic centrifugal acceleration compensation study ($a_c = v \cdot \omega_{\text{yaw}}$). Confirmed test set degradation (+375.2% error), verifying **M028 as the true optimal production baseline**.
+  - **M052**: Dynamic centrifugal acceleration compensation study ($a_c = v \cdot \omega_\text{yaw}$). Confirmed test set degradation (+375.2% error), verifying **M028 as the true optimal production baseline**.
 
 ---
 
