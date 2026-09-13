@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status: IDLE ●"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Duration: 0.0 s"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Accel Telemetry Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#F0F4F8"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACCELEROMETER (m/s²)"
+                android:textStyle="bold"
+                android:textColor="#0055A5"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvAccelValues"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X: 0.00 | Y: 0.00 | Z: 0.00\nMAG: 0.00 m/s²"
+                android:fontFamily="monospace"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Gyro Telemetry Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#F0F4F8"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GYROSCOPE (rad/s)"
+                android:textStyle="bold"
+                android:textColor="#0055A5"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvGyroValues"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X: 0.000 | Y: 0.000 | Z: 0.000\nMAG: 0.000 rad/s"
+                android:fontFamily="monospace"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Rates & Diagnostic Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#EBEBEB"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:id="@+id/tvMeasuredRates"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACCEL Hz: 0.0 Hz | GYRO Hz: 0.0 Hz"
+                android:textStyle="bold"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvEventCounts"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACCEL Events: 0 | GYRO Events: 0"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvLastTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LAST TIMESTAMP: 0 ns"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+        </LinearLayout>
+
+        <!-- GNSS Status Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="#EAF7EA"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/tvGnssStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GNSS Status: SEARCHING..."
+                android:textStyle="bold"
+                android:textColor="#2E7D32" />
+
+            <TextView
+                android:id="@+id/tvGnssSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GNSS Speed: 0.00 m/s | Acc: -- m"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Start Recording"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</ScrollView>
