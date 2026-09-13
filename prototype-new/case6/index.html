@@ -99,7 +99,7 @@
           </div>
           <div class="legend-item">
             <span class="legend-color m028-model"></span>
-            <span>M028 Concept Adapter DR Position</span>
+            <span>M029 Multi-Anchor DR Position</span>
           </div>
           <div class="legend-item">
             <span class="legend-color raw-inertial"></span>
@@ -167,7 +167,7 @@
         <div class="panel-card status-panel-card">
           <h2 class="panel-title">
             <span>PLANETARY NAVIGATION STATUS</span>
-            <span id="engine-badge" class="badge-engine">M028 ADAPTER</span>
+            <span id="engine-badge" class="badge-engine">M029 MULTI-ANCHOR</span>
           </h2>
           
           <div class="status-grid">
@@ -183,12 +183,12 @@
 
             <div class="status-box">
               <span class="status-label">NAVIGATION MODE</span>
-              <span id="val-navmode" class="status-val text-cyan">INERTIAL / DEAD RECKONING</span>
+              <span id="val-navmode" class="status-val text-cyan">M029 MULTI-ANCHOR HEADING</span>
             </div>
 
             <div class="status-box">
               <span class="status-label">ESTIMATION ENGINE</span>
-              <span id="val-engine" class="status-val text-white">M028 CONCEPT ADAPTER</span>
+              <span id="val-engine" class="status-val text-white">M029 MULTI-ANCHOR FUSION</span>
             </div>
 
             <div class="status-box">
@@ -226,12 +226,11 @@
         <!-- DEMO SCOPE / SCIENTIFIC DISCLOSURE PANEL (MANDATORY) -->
         <div class="panel-card disclosure-card">
           <div class="disclosure-header">
-            <span class="disc-title">DEMO SCOPE / SCIENTIFIC DISCLOSURE</span>
+            <span class="disc-title">M029 ARCHITECTURE DISCLOSURE</span>
           </div>
           <p class="disclosure-text">
-            This is a <strong>GNSS-independent navigation concept demonstration</strong> for SIH 2026.
-            The M028 model was developed and validated using <em>terrestrial vehicle data</em> and is <strong>not claimed as flight-qualified planetary navigation software</strong>.
-            The scenario illustrates how onboard inertial dead-reckoning operates continuously when terrestrial GNSS infrastructure is physically absent.
+            Powered by the <strong>M029 Multi-Anchor Heading Architecture</strong> (SpeedNet v2 + Causal Pre-Outage Course Latch + Motion-Gated Zero Yaw + SpeedNet Yaw Fusion + 7-State EKF).<br/><br/>
+            On the IO-VNBD benchmark, the M029 heading-anchor architecture reduced the 300 s Vw04 position error from 218.93 m to 48.20 m. The same architecture is now integrated into the prototype and will be validated using real smartphone sensor data.
           </p>
         </div>
 

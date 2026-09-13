@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       gnssStatusText.textContent = 'MEASUREMENT DENIED';
       statGnssCondition.textContent = 'MEASUREMENT SUPPRESSION';
       statGnssCondition.className = 'stat-value color-denied';
-      statNavMode.textContent = 'DEAD RECKONING (M028)';
+      statNavMode.textContent = sample.nav_mode || 'M029 MULTI-ANCHOR HEADING';
 
       const outageSec = Math.max(0, sample.t - 35.0);
       const mins = Math.floor(outageSec / 60);

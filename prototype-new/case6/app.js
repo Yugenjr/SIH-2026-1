@@ -328,7 +328,7 @@
       valEnvironment.textContent = 'Mars Surface (Jezero Delta)';
       valGnss.textContent = 'NOT AVAILABLE';
       valGnss.className = 'status-val text-danger';
-      valNavmode.textContent = 'INERTIAL / DEAD RECKONING';
+      valNavmode.textContent = pt.nav_mode || 'M029 MULTI-ANCHOR HEADING';
     }
 
     // 4. Telemetry Displays

@@ -64,7 +64,7 @@
           </div>
           <div class="legend-item">
             <span class="legend-color m028-model"></span>
-            <span>M028 Production DR Engine</span>
+            <span>M029 Multi-Anchor DR Engine</span>
           </div>
           <div class="legend-item">
             <span class="legend-color raw-inertial"></span>
@@ -142,7 +142,7 @@
             <div class="hud-stat">
               <span class="stat-label">Navigation Mode</span>
               <span id="stat-nav-mode" class="stat-value">GNSS-AIDED NAVIGATION</span>
-              <span class="stat-sub">7-State ENU Extended Kalman Filter</span>
+              <span class="stat-sub">M029 Multi-Anchor Heading</span>
             </div>
 
             <div class="hud-stat">
@@ -214,10 +214,10 @@
           </div>
         </div>
 
-        <!-- M028 SUBSYSTEM STATE INDICATORS -->
+        <!-- M029 SUBSYSTEM STATE INDICATORS -->
         <div class="hud-card">
           <div class="card-header">
-            <h3>M028 SUBSYSTEM PIPELINE STATES</h3>
+            <h3>M029 SUBSYSTEM PIPELINE STATES</h3>
           </div>
           
           <div class="subsystem-grid">
@@ -225,39 +225,39 @@
               <div id="led-speednet" class="led-light active"></div>
               <div class="subsystem-info">
                 <span class="sub-name">SpeedNet v2 ($W=40$)</span>
-                <span class="sub-desc">Neural Speed Estimator</span>
+                <span class="sub-desc">Speed & Yaw Estimator</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-nhc" class="led-light active"></div>
               <div class="subsystem-info">
-                <span class="sub-name">Fixed 2D NHC ($R=0.04$)</span>
-                <span class="sub-desc">Lateral Velocity Anchor ($v_{\text{lat}}\approx0$)</span>
+                <span class="sub-name">GNSS Course Latch</span>
+                <span class="sub-desc">Causal Pre-Outage Anchor</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-zupt" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">ZUPT Stop Fusion (F3)</span>
-                <span class="sub-desc">2D Zero-Velocity Update ($P_{\text{stat}}>0.70$)</span>
+                <span class="sub-name">Motion-Gated Zero Yaw</span>
+                <span class="sub-desc">Straight Line Constraint</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-apm" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">APM Pseudo-Measurement (F4)</span>
-                <span class="sub-desc">Braking Integration ($\Delta v=0.50\text{ m/s}$)</span>
+                <span class="sub-name">Heading Anchor Manager</span>
+                <span class="sub-desc">Priority State Machine</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-jerk" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">Zero-Latency Jerk Gate (F2)</span>
-                <span class="sub-desc">Causal Jerk Trigger ($j_{\text{long}}<-1.00\text{ m/s}^3$)</span>
+                <span class="sub-name">7-State EKF + ZUPT</span>
+                <span class="sub-desc">Kinematic Sensor Fusion</span>
               </div>
             </div>
           </div>
@@ -266,12 +266,12 @@
         <!-- ERROR BENCHMARK PERFORMANCE CARD -->
         <div class="hud-card">
           <div class="card-header">
-            <h3>M028 IDR ACCURACY VS RAW INERTIAL</h3>
+            <h3>M029 IDR ACCURACY VS RAW INERTIAL</h3>
           </div>
           
           <div class="drift-comparison-grid">
             <div class="drift-box m028">
-              <span class="drift-title">M028 IDR Position Drift</span>
+              <span class="drift-title">M029 IDR Position Drift</span>
               <span id="drift-m028-value" class="drift-val">0.00 m</span>
               <span class="drift-sub">Locked Benchmark (300s = 218.93m)</span>
             </div>

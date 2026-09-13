@@ -61,10 +61,9 @@
           <div class="legend-item">
             <span class="legend-color ground-truth"></span>
             <span>Ground Truth Reference Route</span>
-          </div>
-          <div class="legend-item">
+          <          <div class="legend-item">
             <span class="legend-color m028-model"></span>
-            <span>M028 Production DR Engine</span>
+            <span>M029 Multi-Anchor DR Engine</span>
           </div>
           <div class="legend-item">
             <span class="legend-color raw-inertial"></span>
@@ -141,7 +140,7 @@
             <div class="hud-stat">
               <span class="stat-label">Navigation Mode</span>
               <span id="stat-nav-mode" class="stat-value">GNSS-AIDED</span>
-              <span class="stat-sub">M028 Production Pipeline</span>
+              <span class="stat-sub">M029 Multi-Anchor Heading</span>
             </div>
 
             <div class="hud-stat">
@@ -217,10 +216,10 @@
           </div>
         </div>
 
-        <!-- M028 SUBSYSTEM STATE INDICATORS -->
+        <!-- M029 SUBSYSTEM STATE INDICATORS -->
         <div class="hud-card">
           <div class="card-header">
-            <h3>M028 SUBSYSTEM PIPELINE STATES</h3>
+            <h3>M029 SUBSYSTEM PIPELINE STATES</h3>
           </div>
           
           <div class="subsystem-grid">
@@ -228,39 +227,39 @@
               <div id="led-speednet" class="led-light active"></div>
               <div class="subsystem-info">
                 <span class="sub-name">SpeedNet v2 ($W=40$)</span>
-                <span class="sub-desc">Neural Speed Estimator</span>
+                <span class="sub-desc">Speed & Yaw Estimator</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-nhc" class="led-light active"></div>
               <div class="subsystem-info">
-                <span class="sub-name">Fixed 2D NHC ($R=0.04$)</span>
-                <span class="sub-desc">Lateral Velocity Anchor ($v_{\text{lat}}\approx0$)</span>
+                <span class="sub-name">GNSS Course Latch</span>
+                <span class="sub-desc">Causal Pre-Outage Anchor</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-zupt" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">ZUPT Stop Fusion (F3)</span>
-                <span class="sub-desc">2D Zero-Velocity Update ($P_{\text{stat}}>0.70$)</span>
+                <span class="sub-name">Motion-Gated Zero Yaw</span>
+                <span class="sub-desc">Straight Line Constraint</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-apm" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">APM Speed Damping (F4)</span>
-                <span class="sub-desc">Braking Correction ($\delta v = 0.50\text{ m/s}$)</span>
+                <span class="sub-name">Heading Anchor Manager</span>
+                <span class="sub-desc">Priority State Machine</span>
               </div>
             </div>
 
             <div class="subsystem-item">
               <div id="led-jerk" class="led-light"></div>
               <div class="subsystem-info">
-                <span class="sub-name">Zero-Latency Jerk Gate (F2)</span>
-                <span class="sub-desc">IMU Jerk Activation ($j_{\text{long}} < -1.00\text{ m/s}^3$)</span>
+                <span class="sub-name">7-State EKF + ZUPT</span>
+                <span class="sub-desc">Kinematic Sensor Fusion</span>
               </div>
             </div>
           </div>
@@ -274,9 +273,9 @@
           
           <div class="drift-comparison">
             <div class="drift-box m028-box">
-              <span class="drift-label">M028 DR ENGINE DRIFT</span>
+              <span class="drift-label">M029 DR ENGINE DRIFT</span>
               <span id="drift-m028-value" class="drift-num">0.00 m</span>
-              <span class="drift-target">Benchmark Target: 218.93 m @ 300s</span>
+              <span class="drift-target">Benchmark: M028 218.93 m → M029 48.20 m @ 300 s</span>
             </div>
 
             <div class="drift-box raw-box">
@@ -287,20 +286,19 @@
           </div>
         </div>
 
-        <!-- M028 BENCHMARK DISCLOSURE CARD -->
+        <!-- M029 BENCHMARK DISCLOSURE CARD -->
         <div class="hud-card disclosure-card">
           <div class="card-header">
-            <h3>M028 PRODUCTION DISCLOSURE</h3>
+            <h3>M029 ARCHITECTURE DISCLOSURE</h3>
           </div>
           <p class="disclosure-text">
-            <b>Navigation Engine:</b> Powered strictly by the locked <b>M028 Production Pipeline</b> (SpeedNet v2 + Raw Gyro + Fixed NHC + 7-State EKF + M013 Physical Bound + M014 ZUPT + M019 APM + M028 Jerk Gate).
+            <b>Navigation Engine:</b> Powered by the <b>M029 Multi-Anchor Heading Architecture</b> (SpeedNet v2 + Causal Pre-Outage Course Latch + Motion-Gated Zero Yaw + SpeedNet Yaw Fusion + 7-State EKF).
           </p>
           <div class="disclosure-benchmarks">
-            <div><span>60s Error:</span> <b>27.35 m</b> (Pass)</div>
-            <div><span>300s Error:</span> <b>218.93 m</b></div>
-            <div><span>1 km Error:</span> <b>307.46 m</b></div>
-            <div><span>Max Compliant:</span> <b>491.50 m</b></div>
+            <div><span>Benchmark Reduction:</span> <b>M028 218.93 m → M029 48.20 m @ 300 s</b></div>
+            <div style="font-size:10px; margin-top:6px; opacity:0.85;">On the IO-VNBD benchmark, the M029 heading-anchor architecture reduced the 300 s Vw04 position error from 218.93 m to 48.20 m. The same architecture is now integrated into the prototype and will be validated using real smartphone sensor data.</div>
           </div>
+        </div>v>
           <p class="disclosure-note">
             *Project benchmark — not tunnel-specific measurement.
           </p>

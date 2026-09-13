@@ -1,73 +1,55 @@
 {
   "scenario_id": "case_04_deep_valley",
   "title": "CASE 04 \u2014 DEEP VALLEY / MOUNTAIN ROAD",
-  "subtitle": "GNSS-Denied Navigation along Winding Mountain Gorge Highway (Solang Valley NH3 Highway)",
+  "subtitle": "Mountain Terrain Horizon Obstruction Navigation (Solang Valley Highway)",
   "environment": {
-    "type": "Deep Valley / Winding Mountain Pass Highway",
-    "location_name": "Solang Valley & Rohtang Pass Corridor (NH3 Himachal Pradesh)",
+    "type": "Mountain Valley Corridor",
+    "location_name": "Solang Valley NH3 Highway",
     "lat_center": 32.315,
-    "lon_center": 77.175,
-    "elevation_range_m": "2,050m - 2,380m Above Sea Level",
-    "mountain_peaks": "Himalayan Ridge Crests (3,800m ASL)",
-    "gnss_condition": "SIMULATED MOUNTAIN RIDGE HORIZON BLOCKAGE & VALLEY SHADOW"
+    "lon_center": 77.155,
+    "gnss_condition": "MOUNTAIN RIDGE SHADOW / HORIZON SIGNAL DENIAL"
   },
   "navigation_engine": {
-    "name": "M028 Production Pipeline",
-    "speed_model": "SpeedNet v2 (W=40, CNN+BiLSTM)",
-    "orientation": "Raw Gyro Yaw Integration",
-    "kinematic_constraint": "Fixed 2D NHC (R_nhc = 0.04)",
-    "filter": "7-State ENU Extended Kalman Filter",
-    "speed_bound": "M013 F4 Confidence-Gated Physical Bound",
-    "zupt": "M014 F3 Zero-Velocity Update (P(stat) > 0.70)",
-    "apm": "M019 F4 Acceleration-Integrated Pseudo-Measurement (delta_v = 0.50 m/s)",
-    "jerk_gate": "M028 F2 Zero-Latency IMU Jerk Gate (j_long < -1.00 m/s^3)",
+    "name": "M029 Multi-Anchor Heading Architecture",
     "locked_benchmark": {
-      "err_60s_m": 27.35,
-      "err_120s_m": 426.85,
-      "err_300s_m": 218.93,
-      "err_1km_m": 307.46,
-      "max_compliant_dist_m": 491.5
+      "m028_err_300s_m": 218.93,
+      "m029_err_300s_m": 48.2,
+      "comparison_label": "Benchmark: M028 218.93 m \u2192 M029 48.20 m @ 300 s"
     }
   },
   "timeline": {
     "total_duration_sec": 300.0,
-    "gnss_aided_pre_outage_sec": 20.0,
-    "gnss_degraded_sec": 20.0,
-    "gnss_outage_start_sec": 40.0,
-    "gnss_outage_end_sec": 260.0,
-    "gnss_outage_duration_sec": 220.0,
-    "gnss_aided_post_outage_sec": 40.0
+    "gnss_aided_pre_outage_sec": 30.0,
+    "gnss_outage_start_sec": 30.0,
+    "gnss_outage_end_sec": 270.0,
+    "gnss_outage_duration_sec": 240.0,
+    "gnss_aided_post_outage_sec": 30.0
   },
   "waypoints": {
     "start": {
       "lat": 32.29,
-      "lon": 77.16,
-      "name": "Open Valley Approach (GNSS Online)"
+      "lon": 77.135,
+      "name": "Open Valley Entrance"
     },
-    "valley_shadow": {
+    "gorge_entry": {
       "lat": 32.302,
-      "lon": 77.168,
-      "name": "Mountain Ridge Shadow Entrance (GNSS Degraded)"
+      "lon": 77.144,
+      "name": "Deep Mountain Gorge Entry"
     },
-    "canyon_gorge": {
+    "mid_gorge": {
       "lat": 32.315,
-      "lon": 77.175,
-      "name": "Deep Valley Gorge Corridor (GNSS Blackout Start)"
+      "lon": 77.155,
+      "name": "Himalayan Ridge Shadow Zone"
     },
-    "mountain_viewpoint": {
+    "gorge_exit": {
       "lat": 32.328,
-      "lon": 77.185,
-      "name": "Mountain Pass Viewpoint (Avalanche Checkpoint / ZUPT Active)"
-    },
-    "valley_exit": {
-      "lat": 32.342,
-      "lon": 77.196,
-      "name": "Valley Gorge Boundary Exit (GNSS Signal Reacquiring)"
+      "lon": 77.168,
+      "name": "Mountain Plateau Exit"
     },
     "destination": {
-      "lat": 32.35,
-      "lon": 77.204,
-      "name": "Open Alpine Plateau (GNSS Restored)"
+      "lat": 32.336,
+      "lon": 77.175,
+      "name": "High Plateau Checkpoint"
     }
   }
 }

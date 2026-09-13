@@ -11,21 +11,15 @@
     "gnss_condition": "SIMULATED OUTAGE / DENSE CANOPY DENIAL"
   },
   "navigation_engine": {
-    "name": "M028 Production Pipeline",
+    "name": "M029 Multi-Anchor Heading Architecture",
     "speed_model": "SpeedNet v2 (W=40, CNN+BiLSTM)",
-    "orientation": "Raw Gyro Yaw Integration",
+    "orientation": "Multi-Anchor Heading Manager (GNSS Course + Motion-Gated Zero Yaw + SpeedNet Yaw)",
     "kinematic_constraint": "Fixed 2D NHC (R_nhc = 0.04)",
     "filter": "7-State ENU Extended Kalman Filter",
-    "speed_bound": "M013 F4 Confidence-Gated Physical Bound",
-    "zupt": "M014 F3 Zero-Velocity Update (P(stat) > 0.70)",
-    "apm": "M019 F4 Acceleration-Integrated Pseudo-Measurement (delta_v = 0.50 m/s)",
-    "jerk_gate": "M028 F2 Zero-Latency IMU Jerk Gate (j_long < -1.00 m/s^3)",
     "locked_benchmark": {
-      "err_60s_m": 27.35,
-      "err_120s_m": 426.85,
-      "err_300s_m": 218.93,
-      "err_1km_m": 307.46,
-      "max_compliant_dist_m": 491.5
+      "m028_err_300s_m": 218.93,
+      "m029_err_300s_m": 48.2,
+      "comparison_label": "Benchmark: M028 218.93 m \u2192 M029 48.20 m @ 300 s"
     }
   },
   "timeline": {
