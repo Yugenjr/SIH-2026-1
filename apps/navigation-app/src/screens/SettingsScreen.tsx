@@ -102,22 +102,22 @@ export const SettingsScreen: React.FC = () => {
         <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
         <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Map Source</Text>
-          <Text style={[styles.rowVal, { color: theme.colors.textSecondary }]}>Local / Offline</Text>
+          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Map Engine</Text>
+          <Text style={[styles.rowValActive, { color: theme.colors.primary }]}>MapLibre</Text>
         </View>
 
         <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
         <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Online Map Tiles</Text>
-          <Text style={[styles.rowValActive, { color: theme.colors.primary }]}>On</Text>
+          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Map Data</Text>
+          <Text style={[styles.rowVal, { color: theme.colors.textSecondary }]}>OpenStreetMap Vector</Text>
         </View>
 
         <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
         <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Offline Map Cache</Text>
-          <Text style={[styles.rowVal, { color: theme.colors.textSecondary }]}>124 MB</Text>
+          <Text style={[styles.rowLabel, { color: theme.colors.textPrimary }]}>Offline Maps</Text>
+          <Text style={[styles.rowValMuted, { color: theme.colors.textMuted }]}>Not configured</Text>
         </View>
       </View>
 
