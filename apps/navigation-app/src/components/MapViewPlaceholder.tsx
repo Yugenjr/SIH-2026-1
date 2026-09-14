@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavigationMap } from './map/NavigationMap';
-import { VehiclePose, TrajectoryPoint, GnssStatus } from '../types/navigation';
+import { VehiclePose, TrajectoryPoint, GnssStatus, Destination, Route } from '../types/navigation';
 
 interface MapViewProps {
   pose: VehiclePose;
@@ -10,6 +10,8 @@ interface MapViewProps {
   lastKnownPose: VehiclePose | null;
   confidence?: number;
   isNavigating?: boolean;
+  destination?: Destination | null;
+  route?: Route | null;
 }
 
 export const MapViewPlaceholder: React.FC<MapViewProps> = (props) => {

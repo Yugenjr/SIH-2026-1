@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { NavigationState, ActiveTab } from '../types/navigation';
+import { NavigationState, ActiveTab, Destination } from '../types/navigation';
 import { NavigationService } from '../services/NavigationService';
+import { RouteCalculationResult } from '../services/routing/RouteEngine';
 
 interface NavigationContextType {
   state: NavigationState;
   startNavigation: () => Promise<void>;
   stopNavigation: () => void;
   setActiveTab: (tab: ActiveTab) => void;
+  setDestination: (destination: Destination | null) => void;
+  clearDestination: () => void;
+  calculateRoute: () => Promise<RouteCalculationResult>;
+  clearRoute: () => void;
+  startTurnByTurnNavigation: () => void;
+  endTurnByTurnNavigation: () => void;
   service: NavigationService;
 }
 
@@ -29,6 +36,12 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     startNavigation: () => navigationServiceInstance.startNavigation(),
     stopNavigation: () => navigationServiceInstance.stopNavigation(),
     setActiveTab: (tab: ActiveTab) => navigationServiceInstance.setActiveTab(tab),
+    setDestination: (dest: Destination | null) => navigationServiceInstance.setDestination(dest),
+    clearDestination: () => navigationServiceInstance.clearDestination(),
+    calculateRoute: () => navigationServiceInstance.calculateRoute(),
+    clearRoute: () => navigationServiceInstance.clearRoute(),
+    startTurnByTurnNavigation: () => navigationServiceInstance.startTurnByTurnNavigation(),
+    endTurnByTurnNavigation: () => navigationServiceInstance.endTurnByTurnNavigation(),
     service: navigationServiceInstance,
   };
 

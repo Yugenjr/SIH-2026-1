@@ -46,18 +46,19 @@ export const StatusCard: React.FC<StatusCardProps> = ({ navState }) => {
         <View style={styles.cardItem}>
           <Text style={styles.label}>VEHICLE SPEED</Text>
           <Text style={styles.valueLarge}>
-            {pose.speed} <Text style={styles.unitText}>km/h</Text>
+            {pose.speed !== null && pose.speed !== undefined ? pose.speed.toFixed(1) : '--'}{' '}
+            <Text style={styles.unitText}>km/h</Text>
           </Text>
         </View>
 
         <View style={styles.cardItem}>
           <Text style={styles.label}>HEADING ANCHOR</Text>
           <Text style={styles.valueLarge}>
-            {Math.round(pose.heading)}<Text style={styles.unitText}>°</Text>
+            {pose.heading !== null && pose.heading !== undefined ? `${Math.round(pose.heading)}°` : '--'}
           </Text>
         </View>
 
-        {/* Row 3: Subsystems & Uncertainty */}
+        {/* Row 3: Subsystems & Uncertainty / DR Distance / Map Match */}
         <View style={styles.cardItemFull}>
           <View style={styles.subsystemRow}>
             <View style={styles.subsystemItem}>
@@ -66,13 +67,25 @@ export const StatusCard: React.FC<StatusCardProps> = ({ navState }) => {
             </View>
             <View style={styles.subsystemDivider} />
             <View style={styles.subsystemItem}>
-              <Text style={styles.subLabel}>MAP</Text>
-              <Text style={styles.subValue}>{mapStatus}</Text>
+              <Text style={styles.subLabel}>
+                {navState.drState === 'DR_ACTIVE' ? 'MAP MATCH' : 'MAP'}
+              </Text>
+              <Text style={styles.subValue}>
+                {navState.drState === 'DR_ACTIVE'
+                  ? (navState.mapMatchStatus || 'UNAVAILABLE')
+                  : mapStatus}
+              </Text>
             </View>
             <View style={styles.subsystemDivider} />
             <View style={styles.subsystemItem}>
-              <Text style={styles.subLabel}>UNCERTAINTY</Text>
-              <Text style={styles.subValueHighlight}>±{positionUncertainty.toFixed(1)} m</Text>
+              <Text style={styles.subLabel}>
+                {navState.drState === 'DR_ACTIVE' ? 'DR TRAJ DIST' : 'UNCERTAINTY'}
+              </Text>
+              <Text style={styles.subValueHighlight}>
+                {navState.drState === 'DR_ACTIVE' && navState.drDistanceMeters !== undefined
+                  ? `${navState.drDistanceMeters.toFixed(1)} m`
+                  : positionUncertainty !== null ? `±${positionUncertainty.toFixed(1)} m` : '--'}
+              </Text>
             </View>
           </View>
         </View>

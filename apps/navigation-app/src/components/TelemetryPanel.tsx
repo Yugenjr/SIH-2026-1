@@ -13,18 +13,36 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
   const { theme } = useAppTheme();
 
   const isNavigating = navState.isNavigating;
+  const isSignalLost = navState.gnssStatus === 'SIGNAL_LOST';
+  const isWaiting = navState.gnssStatus === 'WAITING' || navState.gnssStatus === 'PERMISSION_REQUIRED';
+
+  const speedEst = navState.speedEstimate;
   const speedDisplay =
-    navState.pose.speed !== null && navState.pose.speed >= 0
-      ? navState.pose.speed.toFixed(1)
-      : '--';
+    isSignalLost || isWaiting || !speedEst || !speedEst.valid || speedEst.speedKmh === null
+      ? '--'
+      : speedEst.speedKmh.toFixed(1);
+
+  const speedSourceTag =
+    speedEst && speedEst.valid && speedEst.speedKmh !== null && speedEst.speedKmh > 0
+      ? speedEst.source === 'GNSS_REPORTED'
+        ? 'REP'
+        : speedEst.source === 'GNSS_DERIVED'
+        ? 'DER'
+        : ''
+      : '';
+
+  const headingEst = navState.headingEstimate;
   const headingDisplay =
-    navState.pose.heading !== null && navState.pose.heading >= 0
-      ? `${navState.pose.heading}°`
-      : '--°';
+    isSignalLost || isWaiting || !headingEst || !headingEst.valid || headingEst.headingDeg === null
+      ? '--'
+      : `${Math.round(headingEst.headingDeg)}°`;
+
   const accuracyDisplay =
-    navState.positionUncertainty !== null && navState.positionUncertainty >= 0
-      ? `${navState.positionUncertainty.toFixed(1)} m`
-      : '-- m';
+    isWaiting || navState.positionUncertainty === null
+      ? '--'
+      : isSignalLost
+      ? `Last ${navState.positionUncertainty.toFixed(1)} m`
+      : `${navState.positionUncertainty.toFixed(1)} m`;
 
   return (
     <View style={[styles.panel, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.cardBorder }]}>
@@ -32,7 +50,9 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
       <View style={[styles.strip, { backgroundColor: theme.colors.surfaceHeader, borderColor: theme.colors.cardBorder }]}>
         {/* SPEED */}
         <View style={styles.metricCell}>
-          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>SPEED</Text>
+          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>
+            SPEED {speedSourceTag ? `(${speedSourceTag})` : ''}
+          </Text>
           <View style={styles.numRow}>
             <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{speedDisplay}</Text>
             <Text style={[styles.numUnit, { color: theme.colors.textSecondary }]}>km/h</Text>

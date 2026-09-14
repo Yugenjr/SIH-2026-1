@@ -4,11 +4,10 @@ import { useNavigation } from '../state/NavigationContext';
 import { theme } from '../theme/theme';
 
 export const ControlPanel: React.FC = () => {
-  const { state, startNavigation, stopNavigation, cycleDemoState, resetPosition } =
-    useNavigation();
+  const { state, startNavigation, stopNavigation } = useNavigation();
 
   const isNavigating = state.isNavigating;
-  const demoIndex = state.demoStateIndex;
+  const demoIndex = state.demoStateIndex ?? 0;
 
   const demoStateLabels = ['1. GNSS AVAILABLE', '2. GNSS DENIED (IDR)', '3. RECOVERING (FUSION)'];
 
@@ -30,18 +29,10 @@ export const ControlPanel: React.FC = () => {
 
       {/* Secondary Demo Controls Row */}
       <View style={styles.secondaryRow}>
-        <TouchableOpacity
-          style={styles.demoStateButton}
-          onPress={cycleDemoState}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.demoStateLabel}>SIMULATE OUTAGE:</Text>
-          <Text style={styles.demoStateValue}>{demoStateLabels[demoIndex]}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.resetButton} onPress={resetPosition} activeOpacity={0.8}>
-          <Text style={styles.resetText}>RESET</Text>
-        </TouchableOpacity>
+        <View style={styles.demoStateButton}>
+          <Text style={styles.demoStateLabel}>NAVIGATION MODE:</Text>
+          <Text style={styles.demoStateValue}>{state.navigationMode}</Text>
+        </View>
       </View>
     </View>
   );

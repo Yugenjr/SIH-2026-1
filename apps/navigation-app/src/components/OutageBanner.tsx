@@ -9,13 +9,30 @@ interface OutageBannerProps {
   confidence?: number;
   speed?: number | null;
   heading?: number | null;
+  drState?: 'DR_INACTIVE' | 'DR_READY' | 'DR_ACTIVE';
 }
 
-export const OutageBanner: React.FC<OutageBannerProps> = ({ status }) => {
+export const OutageBanner: React.FC<OutageBannerProps> = ({ status, outageSeconds = 0, drState }) => {
   const { theme } = useAppTheme();
-  if (status === 'AVAILABLE') return null;
+  if (status === 'AVAILABLE' && drState !== 'DR_ACTIVE') return null;
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const getBannerConfig = () => {
+    if (drState === 'DR_ACTIVE') {
+      return {
+        title: `INERTIAL DEAD RECKONING ACTIVE (${formatTimer(outageSeconds)})`,
+        sub: 'Real-time phone IMU 7-State ENU Kinematic Engine propagation',
+        color: '#00E5FF',
+        bgColor: 'rgba(0, 229, 255, 0.10)',
+        borderColor: 'rgba(0, 229, 255, 0.40)',
+      };
+    }
+
     switch (status) {
       case 'WAITING':
         return {
@@ -35,8 +52,8 @@ export const OutageBanner: React.FC<OutageBannerProps> = ({ status }) => {
         };
       case 'SIGNAL_LOST':
         return {
-          title: 'GNSS SIGNAL LOST',
-          sub: 'Location fix lost • Map frozen at last known position',
+          title: `GNSS UNAVAILABLE • DR READY (${formatTimer(outageSeconds)})`,
+          sub: 'GNSS denied • Physical IMU ready for inertial propagation',
           color: '#EF4444',
           bgColor: 'rgba(239, 68, 68, 0.08)',
           borderColor: 'rgba(239, 68, 68, 0.35)',

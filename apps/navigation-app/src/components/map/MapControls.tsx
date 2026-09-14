@@ -7,6 +7,7 @@ interface MapControlsProps {
   onZoomOut: () => void;
   onRecenter: () => void;
   isFollowing?: boolean;
+  hasValidPosition?: boolean;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -14,40 +15,71 @@ export const MapControls: React.FC<MapControlsProps> = ({
   onZoomOut,
   onRecenter,
   isFollowing = true,
+  hasValidPosition = true,
 }) => {
   const { theme } = useAppTheme();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
+      {/* Zoom In (+) Control Button */}
       <TouchableOpacity
-        style={[styles.btn, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}
+        style={[
+          styles.btn,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.cardBorder,
+          },
+        ]}
         onPress={onZoomIn}
-        activeOpacity={0.8}
+        activeOpacity={0.75}
+        accessibilityLabel="Zoom map in"
+        accessibilityRole="button"
       >
         <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>+</Text>
       </TouchableOpacity>
 
+      {/* Zoom Out (−) Control Button */}
       <TouchableOpacity
-        style={[styles.btn, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}
+        style={[
+          styles.btn,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.cardBorder,
+          },
+        ]}
         onPress={onZoomOut}
-        activeOpacity={0.8}
+        activeOpacity={0.75}
+        accessibilityLabel="Zoom map out"
+        accessibilityRole="button"
       >
         <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>−</Text>
       </TouchableOpacity>
 
+      {/* Recenter / Camera Follow Control Button */}
       <TouchableOpacity
         style={[
           styles.recenterBtn,
           {
-            backgroundColor: isFollowing ? theme.colors.card : theme.colors.primary,
-            borderColor: isFollowing ? theme.colors.cardBorder : theme.colors.primary,
+            backgroundColor: !isFollowing ? theme.colors.primary : theme.colors.card,
+            borderColor: !isFollowing ? theme.colors.primary : theme.colors.cardBorder,
+            opacity: hasValidPosition ? 1.0 : 0.45,
           },
         ]}
         onPress={onRecenter}
-        activeOpacity={0.8}
+        disabled={!hasValidPosition}
+        activeOpacity={0.75}
+        accessibilityLabel={!isFollowing ? 'Recenter map to vehicle' : 'Map following vehicle'}
+        accessibilityRole="button"
       >
         {!isFollowing ? (
-          <Text style={styles.recenterText}>RECENTER</Text>
+          <View style={styles.recenterContent}>
+            <View style={styles.crosshairDot} />
+            <Text style={styles.recenterText}>RECENTER</Text>
+          </View>
         ) : (
           <View style={[styles.targetRing, { borderColor: theme.colors.primary }]}>
             <View style={[styles.targetDot, { backgroundColor: theme.colors.primary }]} />
@@ -61,50 +93,75 @@ export const MapControls: React.FC<MapControlsProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 12,
-    right: 10,
-    zIndex: 15,
+    bottom: 24,
+    right: 14,
+    zIndex: 20,
+    alignItems: 'flex-end',
   },
   btn: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
+    width: 42,
+    height: 42,
+    borderRadius: 10,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  btnText: {
+    fontSize: 22,
+    fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recenterBtn: {
-    height: 32,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    height: 42,
+    minWidth: 42,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
-    minWidth: 32,
+    marginBottom: 4,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  recenterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  crosshairDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    marginRight: 6,
   },
   recenterText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 0.6,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   targetRing: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 1.5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   targetDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 });
+

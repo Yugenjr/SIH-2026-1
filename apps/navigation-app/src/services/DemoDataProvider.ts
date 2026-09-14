@@ -18,9 +18,13 @@ export class DemoDataProvider {
         heading: 127,
         speed: 42.0,
       },
+      currentFix: null,
+      filteredPose: null,
       positionUncertainty: 1.2,
       gnssStatus: 'AVAILABLE',
       navigationMode: 'GNSS NAVIGATION',
+      locationPermissionStatus: 'GRANTED',
+      updateRateHz: 10,
       imuStatus: 'CONNECTED',
       mapStatus: 'OFFLINE VECTOR',
       isNavigating: false,
@@ -35,6 +39,38 @@ export class DemoDataProvider {
       activeBannerMessage: null,
       activeTab: 'NAVIGATE',
       telemetryHistory: [],
+      diagnostics: {
+        fixCount: 0,
+        acceptedFixCount: 0,
+        rejectedOutlierCount: 0,
+        lastFixAgeSeconds: 0,
+        updateRateHz: 10,
+        meanIntervalMs: 100,
+        medianIntervalMs: 100,
+        minIntervalMs: 90,
+        maxIntervalMs: 110,
+        currentAccuracy: 1.2,
+        minAccuracy: 1.0,
+        maxAccuracy: 2.0,
+        meanAccuracy: 1.2,
+        reportedSpeedKmH: 42.0,
+        hasSpeed: true,
+        derivedSpeedKmH: 42.0,
+        filteredSpeedKmH: 42.0,
+        reportedBearing: 127,
+        hasBearing: true,
+        filteredHeadingDeg: 127,
+        filterState: 'MOVING',
+        rawJitterMaxMeters: 0.2,
+        rawJitterMeanMeters: 0.1,
+        filteredJitterMaxMeters: 0.05,
+        filteredJitterMeanMeters: 0.02,
+        filterLatencyMs: 2.1,
+        rawLatitude: 12.9716,
+        rawLongitude: 77.5946,
+        filteredLatitude: 12.9716,
+        filteredLongitude: 77.5946,
+      },
     };
 
     this.initDemoTrajectories();
@@ -176,10 +212,10 @@ export class DemoDataProvider {
       // GNSS RECOVERING (GNSS REACQUIRED)
       this.stopOutageTimer();
       this.state.gnssStatus = 'RECOVERING';
-      this.state.navigationMode = 'GNSS REACQUIRED';
+      this.state.navigationMode = 'GNSS NAVIGATION';
       this.state.positionUncertainty = 2.1;
       this.state.confidence = 97;
-      this.state.activeBannerMessage = 'GNSS REACQUIRED — Synchronizing navigation state...';
+      this.state.activeBannerMessage = 'GNSS RECOVERING — Synchronizing navigation state...';
 
       // Auto-transition back to GNSS AVAILABLE after 3.5 seconds
       this.recoveryTimeout = setTimeout(() => {
@@ -190,7 +226,7 @@ export class DemoDataProvider {
   }
 
   public cycleDemoState() {
-    const nextState = (this.state.demoStateIndex + 1) % 3;
+    const nextState = ((this.state.demoStateIndex ?? 0) + 1) % 3;
     this.setDemoState(nextState);
   }
 
@@ -223,7 +259,8 @@ export class DemoDataProvider {
   private tick() {
     this.step++;
     const turnRate = Math.sin(this.step / 20) * 1.5;
-    const newHeading = (this.state.pose.heading + turnRate + 360) % 360;
+    const currentHeading = this.state.pose.heading ?? 127;
+    const newHeading = (currentHeading + turnRate + 360) % 360;
     const speed = 42.0 + Math.sin(this.step / 10) * 4.0;
     const speedMps = speed / 3.6;
     const dt = 0.1;

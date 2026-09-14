@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { ThemeMode, getTheme, ThemeColors } from './theme';
 
@@ -22,7 +22,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
+  // Default appearance is LIGHT per NavDR Phase 1 specification
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('light');
 
   // Resolved active dark mode status
   const isDark =

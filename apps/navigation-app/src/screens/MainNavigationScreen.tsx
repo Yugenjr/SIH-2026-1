@@ -1,15 +1,100 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Keyboard } from 'react-native';
 import { useNavigation } from '../state/NavigationContext';
 import { useAppTheme } from '../theme/ThemeContext';
 import { TopBar } from '../components/TopBar';
 import { OutageBanner } from '../components/OutageBanner';
 import { MapViewPlaceholder } from '../components/MapViewPlaceholder';
 import { TelemetryPanel } from '../components/TelemetryPanel';
+import { SearchBar } from '../components/search/SearchBar';
+import { SearchResultsList } from '../components/search/SearchResultsList';
+import { DestinationPreviewCard } from '../components/search/DestinationPreviewCard';
+import { NavigationHudCard } from '../components/navigation/NavigationHudCard';
+import { placeSearchService } from '../services/PlaceSearchService';
+import { PlaceSearchResult, Destination } from '../types/navigation';
 
 export const MainNavigationScreen: React.FC = () => {
-  const { state } = useNavigation();
+  const {
+    state,
+    setDestination,
+    clearDestination,
+    calculateRoute,
+    clearRoute,
+    endTurnByTurnNavigation,
+  } = useNavigation();
   const { theme } = useAppTheme();
+
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | undefined>();
+  const [isOffline, setIsOffline] = useState<boolean | undefined>();
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced geocoding search handler (400ms debounce)
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+    setSearchError(undefined);
+    setIsOffline(undefined);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (text.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    debounceTimerRef.current = setTimeout(async () => {
+      const res = await placeSearchService.search(text);
+      setSearchResults(res.results);
+      setSearchError(res.error);
+      setIsOffline(res.isOffline);
+      setIsSearching(false);
+    }, 400);
+  };
+
+  const handleClearSearch = () => {
+    setQuery('');
+    setSearchResults([]);
+    setIsSearching(false);
+    setSearchError(undefined);
+    setIsOffline(undefined);
+    placeSearchService.cancelSearch();
+  };
+
+  const handleSelectResult = (result: PlaceSearchResult) => {
+    Keyboard.dismiss();
+    const dest: Destination = {
+      id: result.id,
+      name: result.name,
+      address: result.address,
+      latitude: result.latitude,
+      longitude: result.longitude,
+    };
+    setDestination(dest);
+    handleClearSearch();
+  };
+
+  const handleCancelDestination = () => {
+    clearDestination();
+    clearRoute();
+    endTurnByTurnNavigation();
+  };
+
+  const handleStartNavigationIntent = async () => {
+    if (state.destination) {
+      await calculateRoute();
+    }
+  };
+
+  const isNavigatingTurnByTurn =
+    state.currentInstruction != null &&
+    state.turnByTurnStatus != null &&
+    state.turnByTurnStatus !== 'IDLE';
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -23,6 +108,7 @@ export const MainNavigationScreen: React.FC = () => {
         confidence={state.confidence}
         speed={state.pose.speed}
         heading={state.pose.heading}
+        drState={state.drState}
       />
 
       {/* Map-Centric Area (75-85% Screen Height) */}
@@ -35,7 +121,53 @@ export const MainNavigationScreen: React.FC = () => {
           lastKnownPose={state.lastKnownGnssPose}
           confidence={state.confidence}
           isNavigating={state.isNavigating}
+          destination={state.destination}
+          route={state.route}
         />
+
+        {/* Turn-by-Turn Navigation HUD Overlay */}
+        {isNavigatingTurnByTurn && state.currentInstruction ? (
+          <View style={styles.hudOverlay}>
+            <NavigationHudCard
+              instruction={state.currentInstruction}
+              distanceToDestinationMeters={state.distanceToDestinationMeters}
+              onEndNavigation={handleCancelDestination}
+            />
+          </View>
+        ) : (
+          /* Floating Destination Search Bar when not actively navigating turn-by-turn */
+          <View style={styles.searchBarOverlay}>
+            <SearchBar
+              value={query}
+              onChangeText={handleQueryChange}
+              onClear={handleClearSearch}
+              isLoading={isSearching}
+              placeholder="Search destination"
+            />
+
+            {/* Real Search Results Dropdown List */}
+            <SearchResultsList
+              results={searchResults}
+              onSelectResult={handleSelectResult}
+              isLoading={isSearching}
+              error={searchError}
+              isOffline={isOffline}
+              query={query}
+            />
+          </View>
+        )}
+
+        {/* Selected Destination Preview Bottom Card */}
+        {state.destination && !isNavigatingTurnByTurn ? (
+          <DestinationPreviewCard
+            destination={state.destination}
+            route={state.route}
+            routeStatus={state.routeStatus}
+            routeError={state.routeError}
+            onStartNavigation={handleStartNavigationIntent}
+            onCancel={handleCancelDestination}
+          />
+        ) : null}
       </View>
 
       {/* Compact Navigation Telemetry Bottom Panel */}
@@ -50,5 +182,20 @@ const styles = StyleSheet.create({
   },
   mapWrapper: {
     flex: 1,
+    position: 'relative',
+  },
+  searchBarOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    right: 14,
+    zIndex: 30,
+  },
+  hudOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    right: 14,
+    zIndex: 30,
   },
 });
