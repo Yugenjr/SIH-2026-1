@@ -9,6 +9,7 @@ interface MapViewProps {
   gnssStatus: GnssStatus;
   lastKnownPose: VehiclePose | null;
   confidence?: number;
+  isNavigating?: boolean;
 }
 
 export const MapViewPlaceholder: React.FC<MapViewProps> = (props) => {

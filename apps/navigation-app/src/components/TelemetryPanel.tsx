@@ -9,47 +9,53 @@ interface TelemetryPanelProps {
 }
 
 export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
-  const { startNavigation, stopNavigation, triggerGnssOutage } = useNavigation();
+  const { startNavigation, stopNavigation } = useNavigation();
   const { theme } = useAppTheme();
 
   const isNavigating = navState.isNavigating;
-  const isDenied = navState.gnssStatus === 'DENIED';
-  const isRecovering = navState.gnssStatus === 'RECOVERING';
+  const speedDisplay =
+    navState.pose.speed !== null && navState.pose.speed >= 0
+      ? navState.pose.speed.toFixed(1)
+      : '--';
+  const headingDisplay =
+    navState.pose.heading !== null && navState.pose.heading >= 0
+      ? `${navState.pose.heading}°`
+      : '--°';
+  const accuracyDisplay =
+    navState.positionUncertainty !== null && navState.positionUncertainty >= 0
+      ? `${navState.positionUncertainty.toFixed(1)} m`
+      : '-- m';
 
   return (
     <View style={[styles.panel, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.cardBorder }]}>
-      {/* Compact Telemetry Strip */}
+      {/* Real GNSS Telemetry Strip */}
       <View style={[styles.strip, { backgroundColor: theme.colors.surfaceHeader, borderColor: theme.colors.cardBorder }]}>
         {/* SPEED */}
         <View style={styles.metricCell}>
           <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>SPEED</Text>
           <View style={styles.numRow}>
-            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{navState.pose.speed}</Text>
+            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{speedDisplay}</Text>
             <Text style={[styles.numUnit, { color: theme.colors.textSecondary }]}>km/h</Text>
           </View>
         </View>
 
         <View style={[styles.vertDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
-        {/* HEADING */}
+        {/* HEADING / GNSS COURSE */}
         <View style={styles.metricCell}>
-          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>HEADING</Text>
+          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>GNSS COURSE</Text>
           <View style={styles.numRow}>
-            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{navState.pose.heading}°</Text>
-            <Text style={[styles.numUnit, { color: theme.colors.textSecondary }]}>SE</Text>
+            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{headingDisplay}</Text>
           </View>
         </View>
 
         <View style={[styles.vertDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
-        {/* CONFIDENCE */}
+        {/* ACCURACY */}
         <View style={styles.metricCell}>
-          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>CONFIDENCE</Text>
+          <Text style={[styles.metricLabel, { color: theme.colors.textMuted }]}>ACCURACY</Text>
           <View style={styles.numRow}>
-            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{navState.confidence}%</Text>
-            <Text style={[styles.numUnit, isDenied ? styles.unitRed : { color: theme.colors.textSecondary }]}>
-              {isDenied ? 'DR' : 'GNSS'}
-            </Text>
+            <Text style={[styles.numValue, { color: theme.colors.textPrimary }]}>{accuracyDisplay}</Text>
           </View>
         </View>
       </View>
@@ -66,23 +72,16 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
           </TouchableOpacity>
         ) : (
           <View style={styles.activeBtnGroup}>
-            <TouchableOpacity
-              style={[
-                styles.simBtn,
-                isDenied && styles.simBtnRecover,
-                isRecovering && styles.simBtnSync,
-              ]}
-              onPress={triggerGnssOutage}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.simBtnText}>
-                {isDenied
-                  ? 'RECOVER GNSS'
-                  : isRecovering
-                  ? 'SYNCHRONIZING...'
-                  : 'SIMULATE GNSS OUTAGE'}
+            <View style={styles.statusIndicatorBox}>
+              <View style={[styles.dot, styles.dotGreen]} />
+              <Text style={[styles.statusIndicatorText, { color: theme.colors.textPrimary }]}>
+                {navState.gnssStatus === 'SIGNAL_LOST'
+                  ? 'GNSS SIGNAL LOST'
+                  : navState.gnssStatus === 'WAITING'
+                  ? 'WAITING FOR FIX'
+                  : 'GNSS ACTIVE'}
               </Text>
-            </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.endBtn, { backgroundColor: theme.colors.secondaryButton, borderColor: theme.colors.cardBorder }]}
@@ -100,34 +99,30 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
 
 const styles = StyleSheet.create({
   panel: {
-    borderTopWidth: 1,
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderTopWidth: 1,
   },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   metricCell: {
     flex: 1,
     alignItems: 'center',
   },
-  vertDivider: {
-    width: 1,
-    height: 22,
-  },
   metricLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.8,
-    marginBottom: 1,
+    marginBottom: 2,
   },
   numRow: {
     flexDirection: 'row',
@@ -136,72 +131,73 @@ const styles = StyleSheet.create({
   numValue: {
     fontSize: 16,
     fontWeight: '900',
-    fontVariant: ['tabular-nums'],
+    letterSpacing: 0.2,
   },
   numUnit: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '700',
     marginLeft: 3,
   },
-  unitRed: {
-    color: '#EF4444',
+  vertDivider: {
+    width: 1,
+    height: 24,
   },
   actionRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   startBtn: {
     flex: 1,
-    height: 42,
-    borderRadius: 6,
+    height: 44,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   startBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1.0,
   },
   activeBtnGroup: {
     flex: 1,
     flexDirection: 'row',
-  },
-  simBtn: {
-    flex: 1,
-    height: 42,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-    borderRadius: 6,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    gap: 8,
   },
-  simBtnRecover: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+  statusIndicatorBox: {
+    flex: 1,
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  simBtnSync: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.4)',
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
-  simBtnText: {
+  dotGreen: {
+    backgroundColor: '#10B981',
+  },
+  statusIndicatorText: {
     fontSize: 11,
-    fontWeight: '900',
-    color: '#EF4444',
-    letterSpacing: 0.8,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   endBtn: {
-    width: 64,
-    height: 42,
+    width: 80,
+    height: 44,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   endBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
     color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
 });

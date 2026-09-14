@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { VehiclePose, TrajectoryPoint, GnssStatus } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
@@ -23,6 +23,7 @@ interface NavigationMapProps {
   idrPoints: TrajectoryPoint[];
   gnssStatus: GnssStatus;
   lastKnownPose: VehiclePose | null;
+  isNavigating?: boolean;
 }
 
 export const NavigationMap: React.FC<NavigationMapProps> = ({
@@ -30,9 +31,11 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   gnssPoints,
   idrPoints,
   gnssStatus,
+  isNavigating = false,
 }) => {
   const { isDark, theme } = useAppTheme();
   const [zoomLevel, setZoomLevel] = useState(15.5);
+  const [isFollowing, setIsFollowing] = useState(true);
   const cameraRef = useRef<any>(null);
   const isDenied = gnssStatus === 'DENIED';
 
@@ -45,6 +48,34 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   const MarkerComponent = MapLibre ? (MapLibre.Marker || MapLibre.PointAnnotation) : null;
 
   const isNativeMapSupported = Platform.OS !== 'web' && MapComponent != null;
+
+  // Re-enable camera follow when navigation starts
+  useEffect(() => {
+    if (isNavigating) {
+      setIsFollowing(true);
+    }
+  }, [isNavigating]);
+
+  // Camera Follow Effect: Center camera on live location when fix arrives and isFollowing is active
+  useEffect(() => {
+    if (isFollowing && pose && pose.latitude && pose.longitude && cameraRef.current) {
+      if (typeof cameraRef.current.flyTo === 'function') {
+        cameraRef.current.flyTo({
+          center: [pose.longitude, pose.latitude],
+          centerCoordinate: [pose.longitude, pose.latitude],
+          zoom: zoomLevel,
+          zoomLevel: zoomLevel,
+          duration: 400,
+        });
+      } else if (typeof cameraRef.current.setStop === 'function') {
+        cameraRef.current.setStop({
+          centerCoordinate: [pose.longitude, pose.latitude],
+          zoomLevel: zoomLevel,
+          duration: 400,
+        });
+      }
+    }
+  }, [pose.latitude, pose.longitude, isFollowing]);
 
   // Transform GNSS trajectory points into GeoJSON LineString feature
   const gnssGeoJson = useMemo(() => {
@@ -84,7 +115,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
     };
   }, [idrPoints]);
 
-  // Handle Zoom & Recenter Actions with both imperative ref and state triggers
+  // Handle Zoom & Recenter Actions
   const handleZoomIn = () => {
     const nextZ = Math.min(zoomLevel + 1.0, 19.0);
     setZoomLevel(nextZ);
@@ -110,12 +141,23 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   };
 
   const handleRecenter = () => {
+    setIsFollowing(true);
     setZoomLevel(15.5);
-    if (cameraRef.current) {
+    if (cameraRef.current && pose.latitude && pose.longitude) {
       if (typeof cameraRef.current.flyTo === 'function') {
-        cameraRef.current.flyTo({ center: [pose.longitude, pose.latitude], centerCoordinate: [pose.longitude, pose.latitude], zoom: 15.5, zoomLevel: 15.5, duration: 400 });
+        cameraRef.current.flyTo({
+          center: [pose.longitude, pose.latitude],
+          centerCoordinate: [pose.longitude, pose.latitude],
+          zoom: 15.5,
+          zoomLevel: 15.5,
+          duration: 400,
+        });
       } else if (typeof cameraRef.current.setStop === 'function') {
-        cameraRef.current.setStop({ centerCoordinate: [pose.longitude, pose.latitude], zoomLevel: 15.5, duration: 400 });
+        cameraRef.current.setStop({
+          centerCoordinate: [pose.longitude, pose.latitude],
+          zoomLevel: 15.5,
+          duration: 400,
+        });
       }
     }
   };
@@ -123,7 +165,15 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   // Render Real MapLibre Native Map View
   if (isNativeMapSupported && MapComponent) {
     return (
-      <View style={styles.container}>
+      <View
+        style={styles.container}
+        onTouchStart={() => {
+          // Disengage camera follow mode on manual user touch/pan gesture
+          if (isFollowing) {
+            setIsFollowing(false);
+          }
+        }}
+      >
         <MapComponent
           style={styles.mapView}
           mapStyle={styleUrl}
@@ -139,7 +189,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
               zoomLevel={zoomLevel}
               center={[pose.longitude, pose.latitude]}
               centerCoordinate={[pose.longitude, pose.latitude]}
-              heading={pose.heading}
+              heading={pose.heading || 0}
               pitch={35}
               animationMode="flyTo"
               animationDuration={300}
@@ -184,7 +234,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
               lngLat={[pose.longitude, pose.latitude]}
               coordinate={[pose.longitude, pose.latitude]}
             >
-              <VehicleMarker heading={pose.heading} isDenied={isDenied} />
+              <VehicleMarker heading={pose.heading || 0} isDenied={isDenied} />
             </MarkerComponent>
           )}
         </MapComponent>
@@ -192,7 +242,9 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
         {/* Development Map Debug Indicator */}
         <View style={[styles.debugTag, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
           <Text style={[styles.debugText, { color: theme.colors.primary }]}>MAPENGINE: MAPLIBRE GL</Text>
-          <Text style={[styles.debugSub, { color: theme.colors.textMuted }]}>OSM VECTOR • LOADED</Text>
+          <Text style={[styles.debugSub, { color: theme.colors.textMuted }]}>
+            {isFollowing ? 'FOLLOWING GPS' : 'FREE PAN'} • OSM VECTOR
+          </Text>
         </View>
 
         {/* Floating Map Controls */}
@@ -200,6 +252,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           onRecenter={handleRecenter}
+          isFollowing={isFollowing}
         />
       </View>
     );

@@ -7,8 +7,27 @@ export const SystemStatusScreen: React.FC = () => {
   const { state } = useNavigation();
   const { theme } = useAppTheme();
 
-  const isImuConnected = state.imuStatus === 'CONNECTED';
   const isGnssAvailable = state.gnssStatus === 'AVAILABLE';
+  const hasFix = state.currentFix !== null && isGnssAvailable;
+
+  const latDisplay = hasFix ? `${state.pose.latitude.toFixed(6)}° N` : 'WAITING FOR FIX';
+  const lngDisplay = hasFix ? `${state.pose.longitude.toFixed(6)}° E` : 'WAITING FOR FIX';
+  const accuracyDisplay =
+    state.positionUncertainty !== null ? `${state.positionUncertainty.toFixed(1)} m` : '--';
+  const speedDisplay =
+    state.pose.speed !== null && state.pose.speed >= 0 ? `${state.pose.speed.toFixed(1)} km/h` : '--';
+  const courseDisplay =
+    state.pose.heading !== null && state.pose.heading >= 0 ? `${state.pose.heading}°` : '--';
+  const updateRateDisplay = `${state.updateRateHz.toFixed(1)} Hz`;
+
+  const statusLabel =
+    state.gnssStatus === 'AVAILABLE'
+      ? 'CONNECTED'
+      : state.gnssStatus === 'PERMISSION_REQUIRED'
+      ? 'PERMISSION DENIED'
+      : state.gnssStatus === 'SIGNAL_LOST'
+      ? 'SIGNAL LOST'
+      : 'WAITING FOR FIX';
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
@@ -18,20 +37,85 @@ export const SystemStatusScreen: React.FC = () => {
         <Text style={[styles.pageTitle, { color: theme.colors.textPrimary }]}>System Status</Text>
       </View>
 
+      {/* REAL GNSS LOCATION TELEMETRY SECTION */}
+      <View style={[styles.sectionGroup, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
+        <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>REAL PHONE LOCATION (GNSS)</Text>
+        <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* STATUS */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Status</Text>
+          <View style={styles.statusBadgeRow}>
+            <View style={[styles.dot, isGnssAvailable ? styles.dotGreen : styles.dotAmber]} />
+            <Text style={[styles.statusText, isGnssAvailable ? styles.textGreen : styles.textAmber]}>
+              {statusLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* LATITUDE */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Latitude</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{latDisplay}</Text>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* LONGITUDE */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Longitude</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{lngDisplay}</Text>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* ACCURACY */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Accuracy</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{accuracyDisplay}</Text>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* SPEED */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Speed</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{speedDisplay}</Text>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* COURSE */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Course</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{courseDisplay}</Text>
+        </View>
+
+        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
+
+        {/* UPDATE RATE */}
+        <View style={styles.rowItem}>
+          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Update Rate</Text>
+          <Text style={[styles.valText, { color: theme.colors.textPrimary }]}>{updateRateDisplay}</Text>
+        </View>
+      </View>
+
       {/* SENSORS SECTION */}
       <View style={[styles.sectionGroup, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
-        <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>SENSORS</Text>
+        <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>HARDWARE SUBSYSTEMS</Text>
         <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
 
         <View style={styles.rowItem}>
           <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>IMU</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>200 Hz</Text>
+            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>GNSS Receiver</Text>
+            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>Android Location Provider</Text>
           </View>
           <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, isImuConnected ? styles.dotGreen : styles.dotRed]} />
-            <Text style={[styles.statusText, isImuConnected ? styles.textGreen : styles.textRed]}>
-              {isImuConnected ? 'Connected' : 'Disconnected'}
+            <View style={[styles.dot, isGnssAvailable ? styles.dotGreen : styles.dotAmber]} />
+            <Text style={[styles.statusText, isGnssAvailable ? styles.textGreen : styles.textAmber]}>
+              {isGnssAvailable ? 'Active' : 'Standby'}
             </Text>
           </View>
         </View>
@@ -40,122 +124,13 @@ export const SystemStatusScreen: React.FC = () => {
 
         <View style={styles.rowItem}>
           <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Accelerometer</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>MEMS 3-Axis</Text>
+            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Map Engine</Text>
+            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>MapLibre GL Native</Text>
           </View>
           <View style={styles.statusBadgeRow}>
             <View style={[styles.dot, styles.dotGreen]} />
-            <Text style={[styles.statusText, styles.textGreen]}>Connected</Text>
+            <Text style={[styles.statusText, styles.textGreen]}>Ready</Text>
           </View>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Gyroscope</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>MEMS 3-Axis</Text>
-          </View>
-          <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, styles.dotGreen]} />
-            <Text style={[styles.statusText, styles.textGreen]}>Connected</Text>
-          </View>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>GNSS</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>Dual L1/L5</Text>
-          </View>
-          <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, isGnssAvailable ? styles.dotGreen : styles.dotRed]} />
-            <Text style={[styles.statusText, isGnssAvailable ? styles.textGreen : styles.textRed]}>
-              {isGnssAvailable ? 'Available' : 'Unavailable'}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* PROCESSING SECTION */}
-      <View style={[styles.sectionGroup, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
-        <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>PROCESSING</Text>
-        <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>SpeedNet</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>CNN + BiLSTM Neural Model</Text>
-          </View>
-          <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-            <Text style={[styles.statusText, { color: theme.colors.primary }]}>Ready</Text>
-          </View>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>7-State EKF</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>Position, Speed & Bias Filter</Text>
-          </View>
-          <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-            <Text style={[styles.statusText, { color: theme.colors.primary }]}>Ready</Text>
-          </View>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>NHC + ZUPT</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>Kinematic Motion Constraints</Text>
-          </View>
-          <View style={styles.statusBadgeRow}>
-            <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-            <Text style={[styles.statusText, { color: theme.colors.primary }]}>Engaged</Text>
-          </View>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <View>
-            <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Processing</Text>
-            <Text style={[styles.itemSub, { color: theme.colors.textMuted }]}>Average Execution Latency</Text>
-          </View>
-          <Text style={[styles.latencyText, { color: theme.colors.textPrimary }]}>{state.processingLatencyMs} ms</Text>
-        </View>
-      </View>
-
-      {/* BENCHMARK SECTION */}
-      <View style={[styles.sectionGroup, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
-        <View style={styles.benchmarkTitleRow}>
-          <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>BENCHMARK</Text>
-          <Text style={[styles.benchmarkOutageTag, { color: theme.colors.primary }]}>IO-VNBD • 300 s outage</Text>
-        </View>
-        <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>M028 Baseline</Text>
-          <Text style={styles.bmValueRed}>218.93 m</Text>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>M029 Candidate</Text>
-          <Text style={styles.bmValueGreen}>48.20 m</Text>
-        </View>
-
-        <View style={[styles.rowDivider, { backgroundColor: theme.colors.cardBorder }]} />
-
-        <View style={styles.rowItem}>
-          <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>Drift reduction</Text>
-          <Text style={[styles.bmValuePrimary, { color: theme.colors.primary }]}>77.98%</Text>
         </View>
       </View>
     </ScrollView>
@@ -198,13 +173,17 @@ const styles = StyleSheet.create({
   ruleDivider: {
     height: 1,
     marginTop: 8,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   rowItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  rowDivider: {
+    height: 1,
+    marginVertical: 2,
   },
   itemTitle: {
     fontSize: 13,
@@ -214,66 +193,35 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 1,
   },
+  valText: {
+    fontSize: 13,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
   statusBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     marginRight: 6,
   },
   dotGreen: {
     backgroundColor: '#10B981',
   },
-  dotRed: {
-    backgroundColor: '#EF4444',
+  dotAmber: {
+    backgroundColor: '#F59E0B',
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   textGreen: {
     color: '#10B981',
   },
-  textRed: {
-    color: '#EF4444',
-  },
-  latencyText: {
-    fontSize: 13,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-  },
-  rowDivider: {
-    height: 1,
-    marginVertical: 6,
-  },
-  benchmarkTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  benchmarkOutageTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  bmValueRed: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#EF4444',
-    fontVariant: ['tabular-nums'],
-  },
-  bmValueGreen: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#10B981',
-    fontVariant: ['tabular-nums'],
-  },
-  bmValuePrimary: {
-    fontSize: 14,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
+  textAmber: {
+    color: '#F59E0B',
   },
 });

@@ -1,16 +1,27 @@
-export type GnssStatus = 'AVAILABLE' | 'DENIED' | 'RECOVERING';
-export type NavigationMode = 'GNSS NAVIGATION' | 'DEAD RECKONING ACTIVE' | 'GNSS REACQUIRED';
+export type GnssStatus = 'AVAILABLE' | 'DENIED' | 'RECOVERING' | 'WAITING' | 'SIGNAL_LOST' | 'PERMISSION_REQUIRED';
+export type NavigationMode = 'GNSS NAVIGATION' | 'WAITING FOR LOCATION' | 'LOCATION PERMISSION REQUIRED' | 'GNSS SIGNAL LOST' | 'DEAD RECKONING ACTIVE';
 export type ImuStatus = 'CONNECTED' | 'DISCONNECTED';
 export type MapStatus = 'OFFLINE VECTOR' | 'LOADING' | 'AVAILABLE';
 export type ActiveTab = 'NAVIGATE' | 'SYSTEM' | 'SETTINGS';
+export type LocationPermissionStatus = 'UNDETERMINED' | 'GRANTED' | 'DENIED' | 'SERVICES_DISABLED';
+
+export interface LocationFix {
+  timestamp: number;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  accuracy: number | null;
+  speed: number | null; // m/s
+  bearing: number | null; // degrees (GNSS course)
+}
 
 export interface VehiclePose {
   x: number;
   y: number;
   latitude: number;
   longitude: number;
-  heading: number; // degrees 0-360
-  speed: number; // km/h
+  heading: number | null; // degrees 0-360 (GNSS course)
+  speed: number | null; // km/h
 }
 
 export interface TrajectoryPoint {
@@ -34,16 +45,18 @@ export interface SensorTelemetry {
 
 export interface NavigationState {
   pose: VehiclePose;
-  positionUncertainty: number; // meters
+  currentFix: LocationFix | null;
+  positionUncertainty: number | null; // meters
   gnssStatus: GnssStatus;
   navigationMode: NavigationMode;
+  locationPermissionStatus: LocationPermissionStatus;
+  updateRateHz: number;
   imuStatus: ImuStatus;
   mapStatus: MapStatus;
   isNavigating: boolean;
-  demoStateIndex: number; // 0: GNSS AVAILABLE, 1: GNSS DENIED, 2: RECOVERING
-  outageDurationSeconds: number; // seconds spent in GNSS loss
+  outageDurationSeconds: number;
   confidence: number; // percentage 0-100%
-  processingLatencyMs: number; // e.g. 9.4 ms
+  processingLatencyMs: number;
   lastKnownGnssPose: VehiclePose | null;
   gnssTrajectory: TrajectoryPoint[];
   idrTrajectory: TrajectoryPoint[];
@@ -67,4 +80,3 @@ export interface SystemInfo {
     disclaimer: string;
   };
 }
-

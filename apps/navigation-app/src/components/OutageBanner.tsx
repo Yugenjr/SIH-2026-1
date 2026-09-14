@@ -5,50 +5,64 @@ import { GnssStatus } from '../types/navigation';
 
 interface OutageBannerProps {
   status: GnssStatus;
-  outageSeconds: number;
-  confidence: number;
-  speed: number;
-  heading: number;
+  outageSeconds?: number;
+  confidence?: number;
+  speed?: number | null;
+  heading?: number | null;
 }
 
-export const OutageBanner: React.FC<OutageBannerProps> = ({ status, outageSeconds }) => {
+export const OutageBanner: React.FC<OutageBannerProps> = ({ status }) => {
   const { theme } = useAppTheme();
   if (status === 'AVAILABLE') return null;
 
-  const formatTimer = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const getBannerConfig = () => {
+    switch (status) {
+      case 'WAITING':
+        return {
+          title: 'WAITING FOR LOCATION',
+          sub: 'Searching for GPS satellite signals...',
+          color: '#3B82F6',
+          bgColor: 'rgba(59, 130, 246, 0.08)',
+          borderColor: 'rgba(59, 130, 246, 0.35)',
+        };
+      case 'PERMISSION_REQUIRED':
+        return {
+          title: 'LOCATION PERMISSION REQUIRED',
+          sub: 'Enable location permission in settings to navigate',
+          color: '#F59E0B',
+          bgColor: 'rgba(245, 158, 11, 0.08)',
+          borderColor: 'rgba(245, 158, 11, 0.35)',
+        };
+      case 'SIGNAL_LOST':
+        return {
+          title: 'GNSS SIGNAL LOST',
+          sub: 'Location fix lost • Map frozen at last known position',
+          color: '#EF4444',
+          bgColor: 'rgba(239, 68, 68, 0.08)',
+          borderColor: 'rgba(239, 68, 68, 0.35)',
+        };
+      default:
+        return null;
+    }
   };
 
-  const isRecovering = status === 'RECOVERING';
+  const config = getBannerConfig();
+  if (!config) return null;
 
   return (
     <View
       style={[
         styles.banner,
-        isRecovering ? styles.recoveringBg : styles.outageBg,
-        { borderBottomColor: isRecovering ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)' },
+        { backgroundColor: config.bgColor, borderBottomColor: config.borderColor },
       ]}
     >
       <View style={styles.leftCol}>
         <View style={styles.titleRow}>
-          <View style={[styles.dot, isRecovering ? styles.amberDot : styles.redDot]} />
-          <Text style={[styles.mainText, isRecovering ? styles.amberText : styles.redText]}>
-            {isRecovering ? 'GNSS REACQUIRED' : 'DEAD RECKONING ACTIVE'}
-          </Text>
+          <View style={[styles.dot, { backgroundColor: config.color }]} />
+          <Text style={[styles.mainText, { color: config.color }]}>{config.title}</Text>
         </View>
-        <Text style={[styles.subText, { color: theme.colors.textSecondary }]}>
-          {isRecovering ? 'Synchronizing state matrix...' : 'GNSS unavailable • AI + IMU'}
-        </Text>
+        <Text style={[styles.subText, { color: theme.colors.textSecondary }]}>{config.sub}</Text>
       </View>
-
-      {!isRecovering && (
-        <View style={[styles.timerBadge, { backgroundColor: theme.colors.card, borderColor: 'rgba(239, 68, 68, 0.35)' }]}>
-          <Text style={[styles.timerLabel, { color: theme.colors.textMuted }]}>OUTAGE </Text>
-          <Text style={styles.timerValue}>{formatTimer(outageSeconds)}</Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -63,12 +77,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     zIndex: 15,
   },
-  outageBg: {
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-  },
-  recoveringBg: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-  },
   leftCol: {
     flex: 1,
   },
@@ -82,45 +90,14 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
     marginRight: 8,
   },
-  redDot: {
-    backgroundColor: '#EF4444',
-  },
-  amberDot: {
-    backgroundColor: '#F59E0B',
-  },
   mainText: {
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.8,
   },
-  redText: {
-    color: '#EF4444',
-  },
-  amberText: {
-    color: '#F59E0B',
-  },
   subText: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  timerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  timerLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  timerValue: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#EF4444',
-    fontVariant: ['tabular-nums'],
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: '500',
   },
 });

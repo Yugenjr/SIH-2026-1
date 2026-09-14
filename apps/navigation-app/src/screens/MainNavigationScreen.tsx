@@ -16,7 +16,7 @@ export const MainNavigationScreen: React.FC = () => {
       {/* Compact Header Bar */}
       <TopBar status={state.gnssStatus} />
 
-      {/* GNSS Outage / Recovery Mode Banner */}
+      {/* GNSS Outage / Status Mode Banner */}
       <OutageBanner
         status={state.gnssStatus}
         outageSeconds={state.outageDurationSeconds}
@@ -34,6 +34,7 @@ export const MainNavigationScreen: React.FC = () => {
           gnssStatus={state.gnssStatus}
           lastKnownPose={state.lastKnownGnssPose}
           confidence={state.confidence}
+          isNavigating={state.isNavigating}
         />
       </View>
 

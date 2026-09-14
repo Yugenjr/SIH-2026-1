@@ -1,35 +1,41 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Logo } from './Logo';
 import { useAppTheme } from '../theme/ThemeContext';
 import { GnssStatus } from '../types/navigation';
-import { useNavigation } from '../state/NavigationContext';
 
 interface TopBarProps {
   status: GnssStatus;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({ status }) => {
-  const { triggerGnssOutage } = useNavigation();
   const { theme } = useAppTheme();
 
   const getBadgeConfig = () => {
     switch (status) {
-      case 'DENIED':
+      case 'WAITING':
         return {
-          bg: 'rgba(239, 68, 68, 0.12)',
-          border: 'rgba(239, 68, 68, 0.35)',
-          dot: theme.colors.gnssDenied,
-          text: '#EF4444',
-          label: 'DR ACTIVE',
+          bg: 'rgba(59, 130, 246, 0.12)',
+          border: 'rgba(59, 130, 246, 0.35)',
+          dot: '#3B82F6',
+          text: '#3B82F6',
+          label: 'SEARCHING GPS',
         };
-      case 'RECOVERING':
+      case 'PERMISSION_REQUIRED':
         return {
           bg: 'rgba(245, 158, 11, 0.12)',
           border: 'rgba(245, 158, 11, 0.35)',
-          dot: theme.colors.gnssRecovering,
-          text: theme.colors.gnssRecovering,
-          label: 'REACQUIRING',
+          dot: '#F59E0B',
+          text: '#F59E0B',
+          label: 'PERM REQUIRED',
+        };
+      case 'SIGNAL_LOST':
+        return {
+          bg: 'rgba(239, 68, 68, 0.12)',
+          border: 'rgba(239, 68, 68, 0.35)',
+          dot: '#EF4444',
+          text: '#EF4444',
+          label: 'SIGNAL LOST',
         };
       case 'AVAILABLE':
       default:
@@ -38,7 +44,7 @@ export const TopBar: React.FC<TopBarProps> = ({ status }) => {
           border: 'rgba(16, 185, 129, 0.30)',
           dot: theme.colors.gnssHealthy,
           text: theme.colors.gnssHealthy,
-          label: 'GNSS AVAILABLE',
+          label: 'GNSS ACTIVE',
         };
     }
   };
@@ -53,14 +59,10 @@ export const TopBar: React.FC<TopBarProps> = ({ status }) => {
       </View>
 
       {/* Compact Status Pill */}
-      <TouchableOpacity
-        style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}
-        onPress={triggerGnssOutage}
-        activeOpacity={0.75}
-      >
+      <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
         <View style={[styles.statusDot, { backgroundColor: badge.dot }]} />
         <Text style={[styles.statusText, { color: badge.text }]}>{badge.label}</Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
