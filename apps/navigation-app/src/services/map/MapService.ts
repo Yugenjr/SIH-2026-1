@@ -1,4 +1,5 @@
-import { MAP_STYLES, DEFAULT_CAMERA_POSE, MapCameraPose } from '../../components/map/mapConfig';
+import { DEFAULT_CAMERA_POSE, MapCameraPose } from '../../components/map/mapConfig';
+import { mapStyleService } from './MapStyleService';
 
 export type MapConnectivityState = 'ONLINE' | 'OFFLINE';
 
@@ -6,7 +7,7 @@ export class MapService {
   private connectivityState: MapConnectivityState = 'ONLINE';
 
   public getStyleUrl(isDark: boolean): string {
-    return isDark ? MAP_STYLES.DARK : MAP_STYLES.LIGHT;
+    return mapStyleService.getStyleUrlForTheme(isDark);
   }
 
   public getDefaultCamera(): MapCameraPose {

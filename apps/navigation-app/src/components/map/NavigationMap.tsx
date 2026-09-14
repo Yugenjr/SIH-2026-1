@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { VehiclePose, TrajectoryPoint, GnssStatus } from '../../types/navigation';
 import { useAppTheme } from '../../theme/ThemeContext';
-import { MAP_STYLES } from './mapConfig';
+import { mapStyleService } from '../../services/map/MapStyleService';
 import { VehicleMarker } from './VehicleMarker';
 import { MapControls } from './MapControls';
 
@@ -39,7 +39,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   const cameraRef = useRef<any>(null);
   const isDenied = gnssStatus === 'DENIED';
 
-  const styleUrl = isDark ? MAP_STYLES.DARK : MAP_STYLES.LIGHT;
+  const styleUrl = mapStyleService.getStyleUrlForTheme(isDark);
 
   const MapComponent = MapLibre ? (MapLibre.Map || MapLibre.MapView) : null;
   const CameraComponent = MapLibre ? MapLibre.Camera : null;
