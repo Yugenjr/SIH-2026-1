@@ -1,0 +1,17 @@
+Metric,Physics-Only Raw DR,M028 Baseline,M028 Without SpeedNet,M028 vs NoSpeedNet Diff
+10s Position Error (m),35.393,65.288,10.884,54.404
+30s Position Error (m),283.132,103.735,156.184,-52.449
+60s Position Error (m),561.56,66.758,796.353,-729.595
+70s Position Error (m),604.581,53.769,1044.843,-991.074
+Position RMSE (m),379.677,78.324,466.349,-388.024
+Mean Position Error (m),318.774,73.92,335.038,-261.119
+Maximum Position Error (m),604.581,108.354,1044.843,-936.489
+10s Heading Error (deg),30.196,0.453,5.818,-5.365
+30s Heading Error (deg),50.446,3.554,9.309,-5.755
+60s Heading Error (deg),79.735,8.025,15.93,-7.905
+70s Heading Error (deg),91.085,8.745,17.124,-8.378
+Heading RMSE (deg),67.369,7.541,9.175,-1.635
+Maximum Heading Error (deg),95.454,18.248,21.125,-2.877
+Velocity RMSE (m/s),6.589,4.165,5.931,-1.767
+Velocity MAE (m/s),5.67,2.955,4.724,-1.769
+Position Drift Rate (m/s),8.637,0.768,14.926,-14.158

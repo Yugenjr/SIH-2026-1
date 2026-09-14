@@ -1,0 +1,5 @@
+Subwindow,Time Range,Total Samples,ACCEPTED_FULL,ACCEPTED_INFLATED,REJECTED_OUTLIER,MOTION_ZERO_YAW,Mean SNet Yaw Error (deg/s),Mean Gyro Yaw Error (deg/s),M028 Mean Head Err (deg),M029 Mean Head Err (deg),M030 Mean Head Err (deg)
+1. Pre-Turn Straight (265s-300s),265.0s - 299.9s,350,66,32,178,0,1.732,4.188,2.49,9.89,14.84
+2. Active 90° Turn (300s-320s),300.0s - 319.9s,200,35,33,115,0,3.116,5.012,9.65,71.87,42.43
+3. Post-Turn Recovery (320s-335s),320.0s - 334.9s,150,24,21,75,0,2.362,3.901,7.31,126.94,82.02
+FULL OUTAGE TOTAL (265s-335s),265.0s - 334.9s,700,125,86,368,0,2.262,4.362,5.57,52.68,37.12

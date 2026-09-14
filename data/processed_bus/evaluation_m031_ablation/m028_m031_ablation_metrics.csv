@@ -1,0 +1,17 @@
+Metric,M028 Baseline,M031 Full,M031-GyroOnly (Ablation),Full vs GyroOnly Diff
+10s Position Error (m),65.288,65.288,65.288,-0.0
+30s Position Error (m),103.735,103.735,103.735,-0.0
+60s Position Error (m),66.758,66.759,66.758,0.0
+70s Position Error (m),53.769,53.769,53.769,-0.0
+Position RMSE (m),78.324,78.324,78.324,-0.0
+Mean Position Error (m),73.92,73.919,73.92,-0.0
+Maximum Position Error (m),108.354,108.353,108.354,-0.0
+10s Heading Error (deg),0.453,0.453,0.453,0.0
+30s Heading Error (deg),3.554,3.554,3.554,-0.0
+60s Heading Error (deg),8.025,8.025,8.025,-0.0
+70s Heading Error (deg),8.745,8.745,8.745,-0.0
+Heading RMSE (deg),7.541,7.541,7.541,0.0
+Maximum Heading Error (deg),18.248,18.248,18.248,0.0
+Velocity RMSE (m/s),4.165,4.165,4.165,-0.0
+Velocity MAE (m/s),2.955,2.955,2.955,-0.0
+Position Drift Rate (m/s),0.768,0.768,0.768,-0.0

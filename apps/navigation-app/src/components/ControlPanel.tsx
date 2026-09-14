@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryButton,
   },
   mainButtonStop: {
-    backgroundColor: theme.colors.stopButton,
+    backgroundColor: theme.colors.outageButton,
   },
   mainButtonText: {
     fontSize: 15,
@@ -78,8 +78,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   stopButtonText: {
-    color: theme.colors.stopButtonText,
+    color: theme.colors.outageButtonText,
   },
+
   secondaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

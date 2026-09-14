@@ -1,54 +1,64 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { VehiclePose, TrajectoryPoint } from '../types/navigation';
-import { theme } from '../theme/theme';
+import { VehiclePose, TrajectoryPoint, GnssStatus } from '../types/navigation';
+import { useAppTheme } from '../theme/ThemeContext';
 
 interface MapViewProps {
   pose: VehiclePose;
   gnssPoints: TrajectoryPoint[];
   idrPoints: TrajectoryPoint[];
-  mapMatchedPoints: TrajectoryPoint[];
-  gnssDenied: boolean;
+  gnssStatus: GnssStatus;
+  lastKnownPose: VehiclePose | null;
+  confidence?: number;
 }
 
 export const MapViewPlaceholder: React.FC<MapViewProps> = ({
   pose,
   gnssPoints,
   idrPoints,
-  mapMatchedPoints,
-  gnssDenied,
+  gnssStatus,
+  lastKnownPose,
 }) => {
-  const [showGnssLayer, setShowGnssLayer] = useState(true);
-  const [showIdrLayer, setShowIdrLayer] = useState(true);
+  const { theme } = useAppTheme();
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const isDenied = gnssStatus === 'DENIED';
 
-  // Map coordinate transformation mock
-  const mapWidth = 340;
-  const mapHeight = 300;
+  // Coordinate projection scaling
+  const mapWidth = 360;
+  const mapHeight = 440;
   const centerX = mapWidth / 2;
   const centerY = mapHeight / 2;
+  const scale = 4.8 * zoomLevel;
 
-  // Render trajectory points as small path nodes
-  const renderPathNodes = (points: TrajectoryPoint[], color: string) => {
+  // Render trajectory path nodes
+  const renderPathTrail = (points: TrajectoryPoint[], color: string, isDashed: boolean = false) => {
     if (points.length < 2) return null;
-    return points.slice(-30).map((pt, idx) => {
-      // Map offset relative to pose
-      const dx = (pt.x - pose.x) * 4;
-      const dy = (pt.y - pose.y) * 4;
+    const recent = points.slice(-35);
+
+    return recent.map((pt, idx) => {
+      const dx = (pt.x - pose.x) * scale;
+      const dy = (pt.y - pose.y) * scale;
       const px = centerX + dx;
       const py = centerY - dy;
 
-      if (px < 0 || px > mapWidth || py < 0 || py > mapHeight) return null;
+      if (px < -20 || px > mapWidth + 20 || py < -20 || py > mapHeight + 20) return null;
+
+      const nodeSize = 4 + (idx / 35) * 3;
+      const opacity = 0.35 + (idx / 35) * 0.65;
 
       return (
         <View
-          key={`node-${idx}`}
+          key={`path-${pt.type}-${idx}`}
           style={[
-            styles.pathNode,
+            styles.pathDot,
             {
-              left: px - 3,
-              top: py - 3,
+              left: px - nodeSize / 2,
+              top: py - nodeSize / 2,
+              width: nodeSize,
+              height: nodeSize,
+              borderRadius: nodeSize / 2,
               backgroundColor: color,
-              opacity: 0.3 + (idx / 30) * 0.7,
+              opacity: isDashed && idx % 2 === 0 ? 0.3 : opacity,
             },
           ]}
         />
@@ -56,76 +66,116 @@ export const MapViewPlaceholder: React.FC<MapViewProps> = ({
     });
   };
 
+  // Last known GNSS fix anchor marker
+  const renderLastKnownAnchor = () => {
+    if (!lastKnownPose || !isDenied) return null;
+    const dx = (lastKnownPose.x - pose.x) * scale;
+    const dy = (lastKnownPose.y - pose.y) * scale;
+    const px = centerX + dx;
+    const py = centerY - dy;
+
+    if (px < -20 || px > mapWidth + 20 || py < -20 || py > mapHeight + 20) return null;
+
+    return (
+      <View key="last-gnss-anchor" style={[styles.anchorContainer, { left: px - 12, top: py - 12 }]}>
+        <View style={[styles.anchorPulse, { borderColor: theme.colors.lastKnownGnssPoint }]} />
+        <View style={[styles.anchorDot, { backgroundColor: theme.colors.lastKnownGnssPoint }]} />
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      {/* Background vector map canvas */}
-      <View style={styles.mapCanvas}>
-        {/* Vector Grid lines */}
+      <View
+        style={[
+          styles.mapCanvas,
+          {
+            backgroundColor: theme.colors.mapBackground,
+            borderColor: theme.colors.cardBorder,
+          },
+        ]}
+      >
+        {/* Subtle Grid Overlay */}
         <View style={styles.gridContainer}>
-          {Array.from({ length: 7 }).map((_, i) => (
-            <View key={`grid-h-${i}`} style={[styles.gridHLine, { top: i * 45 }]} />
+          {Array.from({ length: 9 }).map((_, i) => (
+            <View key={`grid-h-${i}`} style={[styles.gridHLine, { top: i * 50, backgroundColor: theme.colors.mapGrid }]} />
           ))}
           {Array.from({ length: 8 }).map((_, i) => (
-            <View key={`grid-v-${i}`} style={[styles.gridVLine, { left: i * 45 }]} />
+            <View key={`grid-v-${i}`} style={[styles.gridVLine, { left: i * 50, backgroundColor: theme.colors.mapGrid }]} />
           ))}
         </View>
 
-        {/* Major arterial roads vector layout */}
+        {/* Clean Road Network Lines */}
         <View style={styles.roadNetwork}>
-          <View style={styles.mainHighway} />
-          <View style={styles.crossRoad} />
-          <View style={styles.ringRoad} />
+          <View style={[styles.mainCorridor, { backgroundColor: theme.colors.roadMajor }]} />
+          <View style={[styles.crossAvenue, { backgroundColor: theme.colors.roadMinor }]} />
         </View>
 
-        {/* Trajectory layers */}
-        {showGnssLayer && renderPathNodes(gnssPoints, theme.colors.gnssPath)}
-        {showIdrLayer && renderPathNodes(idrPoints, theme.colors.idrPath)}
+        {/* Trajectory Paths */}
+        {renderPathTrail(gnssPoints, theme.colors.gnssPath, false)}
+        {isDenied && renderPathTrail(idrPoints, theme.colors.idrPath, true)}
 
-        {/* Vehicle Marker at center */}
-        <View style={[styles.vehicleContainer, { left: centerX - 18, top: centerY - 18 }]}>
-          <View style={styles.pulseRing} />
+        {/* Last Known Fix Point */}
+        {renderLastKnownAnchor()}
+
+        {/* Heading-Oriented Vehicle Marker */}
+        <View style={[styles.vehicleContainer, { left: centerX - 20, top: centerY - 20 }]}>
           <View
             style={[
-              styles.vehicleIcon,
+              styles.accuracyRing,
+              {
+                borderColor: isDenied ? theme.colors.idrPath : theme.colors.vehicleMarker,
+                backgroundColor: isDenied
+                  ? theme.colors.accuracyDrCircle
+                  : theme.colors.accuracyCircle,
+              },
+            ]}
+          />
+
+          <View
+            style={[
+              styles.vehicleArrowBox,
               { transform: [{ rotate: `${pose.heading}deg` }] },
             ]}
           >
-            <View style={styles.vehicleArrow} />
-          </View>
-          <View style={styles.poseLabelContainer}>
-            <Text style={styles.poseLabelText}>
-              {pose.speed} km/h • {Math.round(pose.heading)}°
-            </Text>
-          </View>
-        </View>
-
-        {/* Offline Vector Map Overlay Tag */}
-        <View style={styles.mapOverlayTag}>
-          <View style={styles.mapStatusDot} />
-          <Text style={styles.mapOverlayText}>OFFLINE VECTOR ENGINE</Text>
-        </View>
-
-        {/* Layer Controls */}
-        <View style={styles.layerControlBox}>
-          <TouchableOpacity
-            style={[styles.layerChip, showGnssLayer && styles.layerChipActive]}
-            onPress={() => setShowGnssLayer(!showGnssLayer)}
-          >
             <View
               style={[
-                styles.chipDot,
-                { backgroundColor: gnssDenied ? theme.colors.gnssDenied : theme.colors.gnssPath },
+                styles.arrowDelta,
+                { borderBottomColor: isDenied ? theme.colors.idrPath : theme.colors.vehicleMarker },
               ]}
             />
-            <Text style={styles.chipText}>GNSS</Text>
-          </TouchableOpacity>
+          </View>
+        </View>
 
-          <TouchableOpacity
-            style={[styles.layerChip, showIdrLayer && styles.layerChipActive]}
-            onPress={() => setShowIdrLayer(!showIdrLayer)}
+        {/* Small Professional Compass (Top-Right) */}
+        <View style={[styles.compactCompass, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
+          <Text style={[styles.compassN, { color: theme.colors.primary }]}>N</Text>
+          <View
+            style={[
+              styles.compassNeedle,
+              { transform: [{ rotate: `${-pose.heading}deg` }] },
+            ]}
           >
-            <View style={[styles.chipDot, { backgroundColor: theme.colors.idrPath }]} />
-            <Text style={styles.chipText}>IDR</Text>
+            <View style={styles.needleN} />
+            <View style={[styles.needleS, { borderTopColor: theme.colors.textMuted }]} />
+          </View>
+        </View>
+
+        {/* Minimal Floating Map Controls (Bottom-Right) */}
+        <View style={styles.floatingControls}>
+          <TouchableOpacity
+            style={[styles.controlBtn, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}
+            onPress={() => setZoomLevel((z) => Math.min(z + 0.3, 2.0))}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.controlIcon, { color: theme.colors.textPrimary }]}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.controlBtn, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}
+            onPress={() => setZoomLevel((z) => Math.max(z - 0.3, 0.7))}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.controlIcon, { color: theme.colors.textPrimary }]}>−</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -136,186 +186,165 @@ export const MapViewPlaceholder: React.FC<MapViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   mapCanvas: {
     flex: 1,
-    minHeight: 280,
-    backgroundColor: theme.colors.mapBackground,
-    borderRadius: theme.borderRadius.md,
+    minHeight: 360,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
     overflow: 'hidden',
     position: 'relative',
   },
   gridContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
   },
   gridHLine: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: theme.colors.mapGrid,
   },
   gridVLine: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: theme.colors.mapGrid,
   },
   roadNetwork: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
   },
-  mainHighway: {
+  mainCorridor: {
     position: 'absolute',
-    top: -20,
-    bottom: -20,
-    left: '45%',
+    top: -40,
+    bottom: -40,
+    left: '46%',
     width: 24,
-    backgroundColor: theme.colors.roadMajor,
-    transform: [{ rotate: '25deg' }],
+    transform: [{ rotate: '20deg' }],
   },
-  crossRoad: {
+  crossAvenue: {
     position: 'absolute',
-    left: -20,
-    right: -20,
-    top: '55%',
-    height: 18,
-    backgroundColor: theme.colors.roadMinor,
-    transform: [{ rotate: '-15deg' }],
+    left: -40,
+    right: -40,
+    top: '50%',
+    height: 16,
+    transform: [{ rotate: '-10deg' }],
   },
-  ringRoad: {
+  pathDot: {
     position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 14,
-    borderColor: 'rgba(30, 44, 74, 0.4)',
-    top: 30,
-    left: 50,
   },
-  pathNode: {
+  anchorContainer: {
     position: 'absolute',
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 8,
+  },
+  anchorPulse: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
+  anchorDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
   vehicleContainer: {
     position: 'absolute',
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: 12,
   },
-  pulseRing: {
+  accuracyRing: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.vehiclePulse,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
   },
-  vehicleIcon: {
-    width: 28,
-    height: 28,
+  vehicleArrowBox: {
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  vehicleArrow: {
+  arrowDelta: {
     width: 0,
     height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderBottomWidth: 20,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 18,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: theme.colors.accent,
   },
-  poseLabelContainer: {
-    position: 'absolute',
-    top: 40,
-    backgroundColor: 'rgba(11, 15, 25, 0.9)',
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  poseLabelText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-  },
-  mapOverlayTag: {
+  compactCompass: {
     position: 'absolute',
     top: 10,
-    left: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(19, 27, 46, 0.85)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-  },
-  mapStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.accent,
-    marginRight: 6,
-  },
-  mapOverlayText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
-    letterSpacing: 0.5,
-  },
-  layerControlBox: {
-    position: 'absolute',
-    bottom: 10,
     right: 10,
-    flexDirection: 'row',
-  },
-  layerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(19, 27, 46, 0.85)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.cardBorder,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 6,
-    opacity: 0.6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 15,
   },
-  layerChipActive: {
-    opacity: 1,
-    borderColor: theme.colors.accent,
+  compassN: {
+    position: 'absolute',
+    top: 1,
+    fontSize: 7,
+    fontWeight: '900',
   },
-  chipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
+  compassNeedle: {
+    width: 12,
+    height: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  chipText: {
-    fontSize: 9,
+  needleN: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderBottomWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#EF4444',
+  },
+  needleS: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  floatingControls: {
+    position: 'absolute',
+    bottom: 12,
+    right: 10,
+    zIndex: 15,
+  },
+  controlBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  controlIcon: {
+    fontSize: 16,
     fontWeight: '700',
-    color: theme.colors.textPrimary,
   },
 });

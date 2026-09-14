@@ -1,38 +1,44 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '../state/NavigationContext';
-import { DenialBanner } from '../components/DenialBanner';
+import { useAppTheme } from '../theme/ThemeContext';
+import { TopBar } from '../components/TopBar';
+import { OutageBanner } from '../components/OutageBanner';
 import { MapViewPlaceholder } from '../components/MapViewPlaceholder';
-import { StatusCard } from '../components/StatusCard';
-import { ControlPanel } from '../components/ControlPanel';
-import { theme } from '../theme/theme';
+import { TelemetryPanel } from '../components/TelemetryPanel';
 
 export const MainNavigationScreen: React.FC = () => {
   const { state } = useNavigation();
+  const { theme } = useAppTheme();
 
   return (
-    <View style={styles.container}>
-      <DenialBanner status={state.gnssStatus} message={state.activeBannerMessage} />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Compact Header Bar */}
+      <TopBar status={state.gnssStatus} />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Map Area */}
+      {/* GNSS Outage / Recovery Mode Banner */}
+      <OutageBanner
+        status={state.gnssStatus}
+        outageSeconds={state.outageDurationSeconds}
+        confidence={state.confidence}
+        speed={state.pose.speed}
+        heading={state.pose.heading}
+      />
+
+      {/* Map-Centric Area (75-85% Screen Height) */}
+      <View style={styles.mapWrapper}>
         <MapViewPlaceholder
           pose={state.pose}
           gnssPoints={state.gnssTrajectory}
           idrPoints={state.idrTrajectory}
-          mapMatchedPoints={state.mapMatchedTrajectory}
-          gnssDenied={state.gnssStatus === 'DENIED'}
+          gnssStatus={state.gnssStatus}
+          lastKnownPose={state.lastKnownGnssPose}
+          confidence={state.confidence}
         />
+      </View>
 
-        {/* Status Dashboard */}
-        <StatusCard navState={state} />
-
-        {/* Action Control Panel */}
-        <ControlPanel />
-      </ScrollView>
+      {/* Compact Navigation Telemetry Bottom Panel */}
+      <TelemetryPanel navState={state} />
     </View>
   );
 };
@@ -40,10 +46,8 @@ export const MainNavigationScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
+  mapWrapper: {
+    flex: 1,
   },
 });

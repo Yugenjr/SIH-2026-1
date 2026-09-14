@@ -1,0 +1,99 @@
+{
+  "source_files": {
+    "imu": "imu.csv",
+    "gnss": "gnss.csv",
+    "metadata": "metadata.json"
+  },
+  "source_device": "V2355",
+  "raw_sampling_stats": {
+    "accel_sample_count": 190869,
+    "gyro_sample_count": 179144,
+    "gnss_sample_count": 380,
+    "accel_median_dt_ms": 2.4512499999786996,
+    "gyro_median_dt_ms": 2.467082999999093,
+    "gnss_median_dt_s": 1.000679009999999,
+    "total_duration_s": 552.610334147
+  },
+  "target_grid": {
+    "sampling_frequency_hz": 10.0,
+    "time_step_s": 0.1,
+    "total_samples": 5527,
+    "valid_samples": 4756,
+    "invalid_samples": 771
+  },
+  "anti_aliasing_filter": {
+    "type": "4th-order Butterworth Low-Pass (SOS)",
+    "cutoff_frequency_hz": 4.5,
+    "intermediate_grid_frequency_hz": 400.0
+  },
+  "interpolation_method": "Dense grid linear interpolation + SOS anti-aliasing + 10Hz downsampling",
+  "axis_mapping": {
+    "phone_x": "Right (Vehicle Lateral X)",
+    "phone_y": "Up/Forward (Vehicle Longitudinal Y)",
+    "phone_z": "Screen Normal (Vehicle Yaw Rotation Z)",
+    "a_long_formula": "-(accel_y - g_y_init)",
+    "a_lat_formula": "accel_x - g_x_init",
+    "yaw_rate_formula": "gyro_z - gyro_z_bias"
+  },
+  "baseline_calibration": {
+    "stationary_window_s": [
+      0.0,
+      8.0
+    ],
+    "gravity_x_init_mps2": 0.16119245088250386,
+    "gravity_y_init_mps2": 1.5131232219294264,
+    "gravity_z_init_mps2": 9.523689424935997,
+    "gyro_z_bias_rads": -0.023435563079383288
+  },
+  "gnss_reference": {
+    "origin_latitude_deg": 10.82832893,
+    "origin_longitude_deg": 77.05647749,
+    "total_distance_m": 4156.016847646743,
+    "start_timestamp_s": 12.007252547,
+    "end_timestamp_s": 469.213903193
+  },
+  "detected_gaps": [
+    {
+      "start_s": 128.778,
+      "end_s": 136.602,
+      "duration_s": 7.824
+    },
+    {
+      "start_s": 373.273,
+      "end_s": 379.156,
+      "duration_s": 5.883
+    },
+    {
+      "start_s": 477.253,
+      "end_s": 522.343,
+      "duration_s": 45.09
+    },
+    {
+      "start_s": 522.962,
+      "end_s": 528.754,
+      "duration_s": 5.792
+    },
+    {
+      "start_s": 532.873,
+      "end_s": 545.279,
+      "duration_s": 12.406
+    }
+  ],
+  "valid_intervals_s": [
+    {
+      "start": 0.0,
+      "end": 128.778,
+      "status": "VALID"
+    },
+    {
+      "start": 128.778,
+      "end": 136.602,
+      "status": "EXCLUDED_GAP"
+    },
+    {
+      "start": 136.602,
+      "end": 552.610334147,
+      "status": "VALID"
+    }
+  ]
+}

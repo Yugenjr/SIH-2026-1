@@ -1,0 +1,6 @@
+{
+  "device_model": "V2355",
+  "android_version": "16",
+  "requested_imu_rate_hz": 100,
+  "orientation_convention": "X=Right, Y=Up\/Forward, Z=Screen Normal"
+}

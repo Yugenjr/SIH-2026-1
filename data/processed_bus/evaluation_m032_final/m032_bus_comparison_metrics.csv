@@ -1,0 +1,17 @@
+Metric,M028 Baseline,M029 Multi-Anchor,M030 Adaptive Gated,M031 Dual-Mode,M032 Adaptive Hybrid (FINAL),M032 Without SpeedNet
+10s Position Error (m),65.288,65.043,65.527,65.288,65.288,10.884
+30s Position Error (m),103.735,103.434,113.726,103.735,103.735,156.184
+60s Position Error (m),66.758,320.942,261.254,66.759,66.699,796.353
+70s Position Error (m),53.769,516.44,410.137,53.769,53.696,1044.843
+Position RMSE (m),78.324,200.299,172.747,78.324,78.303,466.349
+Mean Position Error (m),73.92,155.078,144.057,73.919,73.895,335.038
+Maximum Position Error (m),108.354,516.44,410.137,108.353,108.353,1044.843
+10s Heading Error (deg),0.453,0.507,3.105,0.453,0.453,5.818
+30s Heading Error (deg),3.554,27.874,38.249,3.554,3.554,9.309
+60s Heading Error (deg),8.025,124.739,81.613,8.025,8.025,15.93
+70s Heading Error (deg),8.745,141.843,90.418,8.745,8.744,17.124
+Heading RMSE (deg),7.541,72.165,47.104,7.541,7.539,9.175
+Maximum Heading Error (deg),18.248,142.152,91.129,18.248,18.242,21.125
+Velocity RMSE (m/s),4.165,4.171,4.161,4.165,4.166,5.931
+Velocity MAE (m/s),2.955,2.963,2.953,2.955,2.956,4.724
+Position Drift Rate (m/s),0.768,7.378,5.859,0.768,0.767,14.926

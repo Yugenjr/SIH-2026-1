@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { NavigationState } from '../types/navigation';
+import { NavigationState, ActiveTab } from '../types/navigation';
 import { DemoDataProvider } from '../services/DemoDataProvider';
 
 interface NavigationContextType {
@@ -8,6 +8,8 @@ interface NavigationContextType {
   stopNavigation: () => void;
   setDemoState: (index: number) => void;
   cycleDemoState: () => void;
+  triggerGnssOutage: () => void;
+  setActiveTab: (tab: ActiveTab) => void;
   resetPosition: () => void;
   dataProvider: DemoDataProvider;
 }
@@ -32,6 +34,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     stopNavigation: () => dataProviderInstance.stopNavigation(),
     setDemoState: (idx: number) => dataProviderInstance.setDemoState(idx),
     cycleDemoState: () => dataProviderInstance.cycleDemoState(),
+    triggerGnssOutage: () => dataProviderInstance.triggerGnssOutage(),
+    setActiveTab: (tab: ActiveTab) => dataProviderInstance.setActiveTab(tab),
     resetPosition: () => dataProviderInstance.resetPosition(),
     dataProvider: dataProviderInstance,
   };
@@ -50,3 +54,4 @@ export const useNavigation = (): NavigationContextType => {
   }
   return context;
 };
+

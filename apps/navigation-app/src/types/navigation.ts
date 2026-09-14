@@ -1,7 +1,8 @@
 export type GnssStatus = 'AVAILABLE' | 'DENIED' | 'RECOVERING';
-export type NavigationMode = 'GNSS + INS' | 'IDR' | 'FUSION';
-export type ImuStatus = 'ACTIVE' | 'INACTIVE';
-export type MapStatus = 'OFFLINE' | 'LOADING' | 'AVAILABLE';
+export type NavigationMode = 'GNSS NAVIGATION' | 'DEAD RECKONING ACTIVE' | 'GNSS REACQUIRED';
+export type ImuStatus = 'CONNECTED' | 'DISCONNECTED';
+export type MapStatus = 'OFFLINE VECTOR' | 'LOADING' | 'AVAILABLE';
+export type ActiveTab = 'NAVIGATE' | 'SYSTEM' | 'SETTINGS';
 
 export interface VehiclePose {
   x: number;
@@ -21,6 +22,16 @@ export interface TrajectoryPoint {
   timestamp: number;
 }
 
+export interface SensorTelemetry {
+  accelX: number;
+  accelY: number;
+  accelZ: number;
+  gyroX: number;
+  gyroY: number;
+  gyroZ: number;
+  timestamp: number;
+}
+
 export interface NavigationState {
   pose: VehiclePose;
   positionUncertainty: number; // meters
@@ -30,10 +41,16 @@ export interface NavigationState {
   mapStatus: MapStatus;
   isNavigating: boolean;
   demoStateIndex: number; // 0: GNSS AVAILABLE, 1: GNSS DENIED, 2: RECOVERING
+  outageDurationSeconds: number; // seconds spent in GNSS loss
+  confidence: number; // percentage 0-100%
+  processingLatencyMs: number; // e.g. 9.4 ms
+  lastKnownGnssPose: VehiclePose | null;
   gnssTrajectory: TrajectoryPoint[];
   idrTrajectory: TrajectoryPoint[];
   mapMatchedTrajectory: TrajectoryPoint[];
   activeBannerMessage: string | null;
+  activeTab: ActiveTab;
+  telemetryHistory: SensorTelemetry[];
 }
 
 export interface SystemInfo {
@@ -50,3 +67,4 @@ export interface SystemInfo {
     disclaimer: string;
   };
 }
+

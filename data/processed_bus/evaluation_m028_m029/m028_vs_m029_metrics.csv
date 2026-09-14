@@ -1,0 +1,17 @@
+Metric,M028 Baseline,M029 Multi-Anchor,Improvement (%)
+10s Position Error (m),65.288,65.043,0.37
+30s Position Error (m),103.735,103.434,0.29
+60s Position Error (m),66.758,320.942,-380.75
+70s Position Error (m),53.769,516.44,-860.48
+Position RMSE (m),78.324,200.299,-155.73
+Maximum Position Error (m),108.354,516.44,-376.62
+Mean Position Error (m),73.92,155.078,-109.79
+10s Heading Error (deg),0.453,0.507,-11.95
+30s Heading Error (deg),3.554,27.874,-684.26
+60s Heading Error (deg),8.025,124.739,-1454.38
+70s Heading Error (deg),8.745,141.843,-1521.92
+Heading RMSE (deg),7.541,72.165,-856.98
+Maximum Heading Error (deg),18.248,142.152,-679.01
+Velocity RMSE (m/s),4.165,4.171,-0.14
+Velocity MAE (m/s),2.955,2.963,-0.27
+Position Drift Rate (m/s),0.768,7.378,-860.48

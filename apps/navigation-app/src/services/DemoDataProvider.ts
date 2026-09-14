@@ -1,8 +1,10 @@
-import { NavigationState, TrajectoryPoint } from '../types/navigation';
+import { NavigationState, TrajectoryPoint, VehiclePose, SensorTelemetry, ActiveTab } from '../types/navigation';
 
 export class DemoDataProvider {
   private state: NavigationState;
   private timer: any = null;
+  private outageTimer: any = null;
+  private recoveryTimeout: any = null;
   private step: number = 0;
   private listeners: ((state: NavigationState) => void)[] = [];
 
@@ -13,35 +15,41 @@ export class DemoDataProvider {
         y: 0,
         latitude: 12.9716,
         longitude: 77.5946,
-        heading: 45,
-        speed: 42.6,
+        heading: 127,
+        speed: 42.0,
       },
       positionUncertainty: 1.2,
       gnssStatus: 'AVAILABLE',
-      navigationMode: 'GNSS + INS',
-      imuStatus: 'ACTIVE',
-      mapStatus: 'OFFLINE',
+      navigationMode: 'GNSS NAVIGATION',
+      imuStatus: 'CONNECTED',
+      mapStatus: 'OFFLINE VECTOR',
       isNavigating: false,
       demoStateIndex: 0,
+      outageDurationSeconds: 0,
+      confidence: 98,
+      processingLatencyMs: 9.4,
+      lastKnownGnssPose: null,
       gnssTrajectory: [],
       idrTrajectory: [],
       mapMatchedTrajectory: [],
       activeBannerMessage: null,
+      activeTab: 'NAVIGATE',
+      telemetryHistory: [],
     };
 
     this.initDemoTrajectories();
+    this.initTelemetryHistory();
   }
 
   private initDemoTrajectories() {
-    // Generate curved road demo path
     const points: TrajectoryPoint[] = [];
     const n = 120;
     let cx = 0;
     let cy = 0;
-    let heading = 45;
+    let heading = 127;
 
     for (let i = 0; i < n; i++) {
-      const turn = Math.sin(i / 15) * 2.5;
+      const turn = Math.sin(i / 15) * 2.0;
       heading = (heading + turn + 360) % 360;
       const rad = (heading * Math.PI) / 180;
       const dist = 3.5;
@@ -63,6 +71,23 @@ export class DemoDataProvider {
     this.state.mapMatchedTrajectory = points.slice(0, 40);
   }
 
+  private initTelemetryHistory() {
+    const history: SensorTelemetry[] = [];
+    const now = Date.now();
+    for (let i = 20; i >= 0; i--) {
+      history.push({
+        accelX: Math.sin(i / 3) * 0.4 + 0.02,
+        accelY: Math.cos(i / 2) * 0.3 + 0.15,
+        accelZ: 9.81 + Math.sin(i / 5) * 0.1,
+        gyroX: Math.cos(i / 4) * 0.02,
+        gyroY: Math.sin(i / 3) * 0.015,
+        gyroZ: Math.sin(i / 2) * 0.08,
+        timestamp: now - i * 50,
+      });
+    }
+    this.state.telemetryHistory = history;
+  }
+
   public getState(): NavigationState {
     return { ...this.state };
   }
@@ -78,6 +103,11 @@ export class DemoDataProvider {
   private notify() {
     const currentState = this.getState();
     this.listeners.forEach((l) => l(currentState));
+  }
+
+  public setActiveTab(tab: ActiveTab) {
+    this.state.activeTab = tab;
+    this.notify();
   }
 
   public startNavigation() {
@@ -98,29 +128,63 @@ export class DemoDataProvider {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.stopOutageTimer();
     this.notify();
+  }
+
+  private startOutageTimer() {
+    this.stopOutageTimer();
+    this.outageTimer = setInterval(() => {
+      this.state.outageDurationSeconds += 1;
+      this.notify();
+    }, 1000);
+  }
+
+  private stopOutageTimer() {
+    if (this.outageTimer) {
+      clearInterval(this.outageTimer);
+      this.outageTimer = null;
+    }
   }
 
   public setDemoState(index: number) {
     this.state.demoStateIndex = index;
+    if (this.recoveryTimeout) {
+      clearTimeout(this.recoveryTimeout);
+      this.recoveryTimeout = null;
+    }
+
     if (index === 0) {
       // GNSS AVAILABLE
+      this.stopOutageTimer();
       this.state.gnssStatus = 'AVAILABLE';
-      this.state.navigationMode = 'GNSS + INS';
+      this.state.navigationMode = 'GNSS NAVIGATION';
       this.state.positionUncertainty = 1.2;
+      this.state.outageDurationSeconds = 0;
+      this.state.confidence = 98;
       this.state.activeBannerMessage = null;
     } else if (index === 1) {
-      // GNSS DENIED (IDR ACTIVE)
+      // GNSS DENIED (DEAD RECKONING ACTIVE)
+      this.state.lastKnownGnssPose = { ...this.state.pose };
       this.state.gnssStatus = 'DENIED';
-      this.state.navigationMode = 'IDR';
+      this.state.navigationMode = 'DEAD RECKONING ACTIVE';
       this.state.positionUncertainty = 4.8;
+      this.state.confidence = 94;
       this.state.activeBannerMessage = 'GNSS SIGNAL LOST — DEAD RECKONING ACTIVE';
+      this.startOutageTimer();
     } else if (index === 2) {
-      // GNSS RECOVERING (FUSION)
+      // GNSS RECOVERING (GNSS REACQUIRED)
+      this.stopOutageTimer();
       this.state.gnssStatus = 'RECOVERING';
-      this.state.navigationMode = 'FUSION';
+      this.state.navigationMode = 'GNSS REACQUIRED';
       this.state.positionUncertainty = 2.1;
-      this.state.activeBannerMessage = 'GNSS SIGNAL RESTORED — FUSION RECOVERY';
+      this.state.confidence = 97;
+      this.state.activeBannerMessage = 'GNSS REACQUIRED — Synchronizing navigation state...';
+
+      // Auto-transition back to GNSS AVAILABLE after 3.5 seconds
+      this.recoveryTimeout = setTimeout(() => {
+        this.setDemoState(0);
+      }, 3500);
     }
     this.notify();
   }
@@ -128,6 +192,16 @@ export class DemoDataProvider {
   public cycleDemoState() {
     const nextState = (this.state.demoStateIndex + 1) % 3;
     this.setDemoState(nextState);
+  }
+
+  public triggerGnssOutage() {
+    if (this.state.gnssStatus === 'AVAILABLE') {
+      this.setDemoState(1);
+    } else if (this.state.gnssStatus === 'DENIED') {
+      this.setDemoState(2);
+    } else {
+      this.setDemoState(0);
+    }
   }
 
   public resetPosition() {
@@ -138,19 +212,21 @@ export class DemoDataProvider {
       y: 0,
       latitude: 12.9716,
       longitude: 77.5946,
-      heading: 45,
-      speed: 42.6,
+      heading: 127,
+      speed: 42.0,
     };
+    this.state.outageDurationSeconds = 0;
+    this.state.lastKnownGnssPose = null;
     this.notify();
   }
 
   private tick() {
     this.step++;
-    const turnRate = Math.sin(this.step / 20) * 1.8;
+    const turnRate = Math.sin(this.step / 20) * 1.5;
     const newHeading = (this.state.pose.heading + turnRate + 360) % 360;
-    const speed = 40.0 + Math.sin(this.step / 10) * 5.0; // km/h
+    const speed = 42.0 + Math.sin(this.step / 10) * 4.0;
     const speedMps = speed / 3.6;
-    const dt = 0.1; // 100ms
+    const dt = 0.1;
 
     const rad = (newHeading * Math.PI) / 180;
     const dx = Math.sin(rad) * speedMps * dt;
@@ -166,9 +242,29 @@ export class DemoDataProvider {
       y: newY,
       latitude: newLat,
       longitude: newLon,
-      heading: newHeading,
+      heading: Math.round(newHeading),
       speed: Math.round(speed * 10) / 10,
     };
+
+    // Update processing latency dynamically (8.8ms - 11.2ms)
+    this.state.processingLatencyMs = Math.round((9.4 + Math.sin(this.step / 5) * 0.8) * 10) / 10;
+
+    // Simulate IMU sensor telemetry stream
+    const now = Date.now();
+    const newTelemetry: SensorTelemetry = {
+      accelX: Math.round((Math.sin(this.step / 4) * 0.45 + 0.02) * 100) / 100,
+      accelY: Math.round((Math.cos(this.step / 3) * 0.35 + 0.15) * 100) / 100,
+      accelZ: Math.round((9.81 + Math.sin(this.step / 8) * 0.12) * 100) / 100,
+      gyroX: Math.round((Math.cos(this.step / 5) * 0.025) * 1000) / 1000,
+      gyroY: Math.round((Math.sin(this.step / 4) * 0.018) * 1000) / 1000,
+      gyroZ: Math.round(((turnRate * Math.PI) / 180 + Math.sin(this.step / 3) * 0.01) * 1000) / 1000,
+      timestamp: now,
+    };
+
+    this.state.telemetryHistory.push(newTelemetry);
+    if (this.state.telemetryHistory.length > 25) {
+      this.state.telemetryHistory.shift();
+    }
 
     const newPoint: TrajectoryPoint = {
       x: newX,
@@ -176,7 +272,7 @@ export class DemoDataProvider {
       latitude: newLat,
       longitude: newLon,
       type: this.state.gnssStatus === 'DENIED' ? 'idr' : 'gnss',
-      timestamp: Date.now(),
+      timestamp: now,
     };
 
     if (this.state.gnssStatus === 'AVAILABLE') {
@@ -193,3 +289,4 @@ export class DemoDataProvider {
     this.notify();
   }
 }
+

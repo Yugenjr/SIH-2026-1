@@ -1,0 +1,15 @@
+Metric,M028 Baseline,M029 Multi-Anchor,M030 Adaptive Gated,M030 vs M029 (%),M030 vs M028 (%)
+10s Position Error (m),65.288,65.043,65.527,-0.74,-0.37
+30s Position Error (m),103.735,103.434,113.726,-9.95,-9.63
+60s Position Error (m),66.758,320.942,261.254,18.6,-291.34
+70s Position Error (m),53.769,516.44,410.137,20.58,-662.78
+Position RMSE (m),78.324,200.299,172.747,13.76,-120.55
+Maximum Position Error (m),108.354,516.44,410.137,20.58,-278.52
+10s Heading Error (deg),0.453,0.507,3.105,-512.82,-586.03
+30s Heading Error (deg),3.554,27.874,38.249,-37.22,-976.16
+60s Heading Error (deg),8.025,124.739,81.613,34.57,-916.99
+70s Heading Error (deg),8.745,141.843,90.418,36.26,-933.89
+Heading RMSE (deg),7.541,72.165,47.104,34.73,-524.64
+Maximum Heading Error (deg),18.248,142.152,91.129,35.89,-399.4
+Velocity RMSE (m/s),4.165,4.171,4.161,0.23,0.09
+Position Drift Rate (m/s),0.768,7.378,5.859,20.58,-662.78
