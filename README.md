@@ -41,8 +41,8 @@ During a GNSS outage, position updates cease. A navigation system cannot simply 
 ### The Smartphone MEMS IMU Challenge
 Consumer smartphones contain micro-electro-mechanical systems (MEMS) Inertial Measurement Units (IMUs). Unlike tactical or navigation-grade IMUs costing tens of thousands of dollars, smartphone MEMS sensors exhibit high noise, thermal instability, time-varying bias drifts, and scale factor errors:
 
-1. **Double Integration of Accelerometer Noise**: Integrating accelerometer signals twice to obtain position ($x = \iint a \, dt^2$) causes position error to grow quadratically ($\mathcal{O}(t^2)$) or cubically with bias errors. Uncorrected accelerometer noise causes position estimates to explode within seconds.
-2. **Gyroscope Bias & Heading Drift**: Gyroscope bias errors cause heading error $\delta \psi$ to grow linearly ($\delta \psi \approx b_\omega t$). Because forward velocity is projected into local coordinates using heading ($v_x = v \cos \psi, v_y = v \sin \psi$), a small heading error creates an unobservable orthogonal position drift that grows quadratically with time ($\mathcal{O}(t^2)$).
+1. **Double Integration of Accelerometer Noise**: Integrating accelerometer signals twice to obtain position ($x = \iint a \, dt^2$) causes position error to grow quadratically ($O(t^2)$) or cubically with bias errors. Uncorrected accelerometer noise causes position estimates to explode within seconds.
+2. **Gyroscope Bias & Heading Drift**: Gyroscope bias errors cause heading error $\delta \psi$ to grow linearly ($\delta \psi \approx b_\omega t$). Because forward velocity is projected into local coordinates using heading ($v_x = v \cos \psi, v_y = v \sin \psi$), a small heading error creates an unobservable orthogonal position drift that grows quadratically with time ($O(t^2)$).
 
 ---
 
