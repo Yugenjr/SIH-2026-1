@@ -81,7 +81,9 @@ M040-M052_RESEARCH_PROGRESSION.docx
 # Temporary Screenshots & Test Artifacts
 screen_*.png
 device_screenshot.png
+stage_*.md
 
 # Generated JS Files from TypeScript Compilation in Navigation App
 apps/navigation-app/src/**/*.js
+
 
