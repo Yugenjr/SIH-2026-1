@@ -14,12 +14,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
-      duration: 1500,
+      duration: 1200,
       useNativeDriver: false,
     }).start(() => {
       onFinish();
     });
-  }, [progress, onFinish]);
+  }, []);
 
   const widthInterpolate = progress.interpolate({
     inputRange: [0, 1],

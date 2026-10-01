@@ -27,6 +27,7 @@ import { unavailableRoadNetworkProvider } from './map/UnavailableRoadNetworkProv
 import { offlineOsmRouteEngine } from './routing/OfflineOsmRouteEngine';
 import { RouteCalculationResult } from './routing/RouteEngine';
 import { routeNavigationEngine } from './navigation/RouteNavigationEngine';
+import { demoTrajectorySimulator } from './DemoTrajectorySimulator';
 import { calculateHaversineDistance, calculateMedian } from '../utils/geo';
 
 type StateListener = (state: NavigationState) => void;
@@ -92,7 +93,7 @@ const INITIAL_STATE: NavigationState = {
   idrTrajectory: [],
   mapMatchedTrajectory: [],
   activeBannerMessage: null,
-  activeTab: 'SYSTEM',
+  activeTab: 'NAVIGATE',
   telemetryHistory: [],
   diagnostics: { ...DEFAULT_DIAGNOSTICS },
 };
@@ -119,6 +120,9 @@ export class NavigationService {
   private lastDrTrajLon: number = 0;
   private lastDrTrajTime: number = 0;
 
+  // Demo session management
+  private isDemoSessionActive: boolean = false;
+
   constructor() {
     this.startRateCalculator();
     this.startStaleTicker();
@@ -134,8 +138,15 @@ export class NavigationService {
     }
 
     // Subscribe to physical IMU sensor stream callbacks (Stage 4B)
-    deviceSensorStream.subscribe((sample: ImuSample) => this.handleImuSample(sample));
+    // NOTE: physical IMU updates are ignored during active demo sessions
+    deviceSensorStream.subscribe((sample: ImuSample) => this.handlePhysicalImuSample(sample));
     deviceSensorStream.startStream();
+
+    // Wire demo simulator callbacks — called ONLY after startDemoNavigation()
+    demoTrajectorySimulator.onGnssFix = (fix) => this.handleLocationFix(fix);
+    demoTrajectorySimulator.onImuSample = (sample) => this.handleImuSample(sample);
+    demoTrajectorySimulator.onOutageBegin = (lastFix) => this.handleDemoOutageBegin(lastFix);
+    demoTrajectorySimulator.onRecovery = (firstFix) => this.handleDemoRecovery(firstFix);
   }
 
   public getState(): NavigationState {
@@ -157,6 +168,29 @@ export class NavigationService {
   private setState(updates: Partial<NavigationState>): void {
     this.state = { ...this.state, ...updates };
     this.notify();
+  }
+
+  /**
+   * Handle incoming physical hardware location fixes from phone
+   */
+  private handlePhysicalLocationFix(fix: LocationFix): void {
+    // If demo session is active OR an A* route is loaded,
+    // physical GNSS MUST NOT overwrite the authoritative navigation pose.
+    if (this.isDemoSessionActive || this.state.route !== null) {
+      return;
+    }
+    this.handleLocationFix(fix);
+  }
+
+  /**
+   * Handle incoming physical hardware IMU samples from phone
+   */
+  private handlePhysicalImuSample(sample: ImuSample): void {
+    // During active demo session, synthetic IMU from DemoTrajectorySimulator drives DR.
+    if (this.isDemoSessionActive) {
+      return;
+    }
+    this.handleImuSample(sample);
   }
 
   /**
@@ -188,7 +222,7 @@ export class NavigationService {
     this.lastDrTrajTime = 0;
 
     this.setState({
-      isNavigating: true,
+      isNavigating: false,
       locationPermissionStatus: 'GRANTED',
       gnssStatus: 'WAITING',
       navigationMode: 'WAITING FOR LOCATION',
@@ -202,7 +236,7 @@ export class NavigationService {
 
     // Start watching position
     const success = await this.locationService.startTracking(
-      (fix: LocationFix) => this.handleLocationFix(fix),
+      (fix: LocationFix) => this.handlePhysicalLocationFix(fix),
       (errorMsg: string) => this.handleLocationError(errorMsg)
     );
 
@@ -238,22 +272,31 @@ export class NavigationService {
     this.setState({ activeTab: tab });
   }
 
-  public setDestination(destination: Destination | null): void {
+  public async setDestination(destination: Destination | null): Promise<void> {
+    if (!destination) {
+      this.clearDestination();
+      return;
+    }
+
     this.setState({
       destination,
-      navigationIntent: destination ? 'DESTINATION_SELECTED' : 'IDLE',
+      navigationIntent: 'DESTINATION_SELECTED',
       route: null,
-      routeStatus: 'NONE',
+      routeStatus: 'CALCULATING',
       routeError: null,
       turnByTurnStatus: 'IDLE',
       currentInstruction: null,
       nextInstruction: null,
       distanceToDestinationMeters: undefined,
     });
+
+    await this.calculateRoute();
   }
 
   public clearDestination(): void {
     routeNavigationEngine.reset();
+    demoTrajectorySimulator.stop();
+    this.isDemoSessionActive = false;
     this.setState({
       destination: null,
       navigationIntent: 'IDLE',
@@ -264,6 +307,7 @@ export class NavigationService {
       currentInstruction: null,
       nextInstruction: null,
       distanceToDestinationMeters: undefined,
+      isNavigating: false,
     });
   }
 
@@ -304,12 +348,16 @@ export class NavigationService {
 
     const result = await offlineOsmRouteEngine.calculateRoute(origin, destination);
 
-    if (result.success && result.route) {
+    if (result.success && result.route && result.route.geometry.length >= 2) {
       routeNavigationEngine.reset();
+      const [startLon, startLat] = result.route.geometry[0];
+      const [nextLon, nextLat] = result.route.geometry[1];
+      const initialHeading = this.calcBearing(startLat, startLon, nextLat, nextLon);
+
       const progress = routeNavigationEngine.updateProgress(result.route, {
-        latitude: origin.latitude,
-        longitude: origin.longitude,
-        heading: this.state.pose.heading,
+        latitude: startLat,
+        longitude: startLon,
+        heading: initialHeading,
       });
 
       this.setState({
@@ -320,6 +368,25 @@ export class NavigationService {
         currentInstruction: progress.currentInstruction,
         nextInstruction: progress.nextInstruction,
         distanceToDestinationMeters: progress.distanceToDestinationMeters,
+        pose: {
+          ...this.state.pose,
+          latitude: startLat,
+          longitude: startLon,
+          heading: initialHeading,
+          speed: 0,
+        },
+        isNavigating: false,
+      });
+      // NOTE: demo simulator is NOT started here.
+      // It starts only in startDemoNavigation() — called from "Start Navigation" button.
+    } else if (result.success && result.route) {
+      routeNavigationEngine.reset();
+      this.setState({
+        route: result.route,
+        routeStatus: 'READY',
+        routeError: null,
+        turnByTurnStatus: 'FOLLOWING_ROUTE',
+        isNavigating: false,
       });
     } else {
       this.setState({
@@ -334,6 +401,143 @@ export class NavigationService {
     return result;
   }
 
+  /**
+   * Entry points for backend demo trajectory simulator
+   */
+  public processSimulatedFix(fix: LocationFix): void {
+    this.handleLocationFix(fix);
+  }
+
+  public processSimulatedImu(sample: ImuSample): void {
+    this.handleImuSample(sample);
+  }
+
+  /**
+   * START DEMO NAVIGATION SESSION — called exclusively from "Start Navigation" button.
+   *
+   * This is the ONLY place the demo trajectory simulator starts.
+   * It:
+   *   1. Stops any running simulator.
+   *   2. Moves the vehicle to the A* route start (so marker snaps to route).
+   *   3. Starts the deterministic GNSS → DR → Recovery lifecycle.
+   *   4. Suppresses the physical GNSS signal-loss timer during the demo.
+   */
+  public async startDemoNavigation(): Promise<void> {
+    console.log('[START_TRACE] NAVIGATION_SERVICE');
+    console.log('[DEMO_SESSION] START_REQUEST');
+
+    const route = this.state.route;
+    if (!route || !route.geometry || route.geometry.length < 2) {
+      console.warn('[START_TRACE] NO_ROUTE — startDemoNavigation called but no route available');
+      return;
+    }
+
+    console.log('[START_TRACE] ROUTE_AVAILABLE points=' + route.geometry.length);
+
+    // Stop any previous simulation
+    demoTrajectorySimulator.stop();
+    this.isDemoSessionActive = true;
+
+    // Suppress physical GNSS signal-loss timer — the demo drives its own GNSS state
+    this.clearSignalLossTimer();
+
+    // Reset filter states so synthetic fixes are not rejected as outliers against pre-demo physical fix
+    this.gnssFilter.reset();
+    gnssOutageDetector.reset();
+    speedPipeline.reset();
+    headingPipeline.reset();
+
+    // Snap vehicle to the A* route start position
+    const [startLon, startLat] = route.geometry[0];
+    const [nextLon, nextLat] = route.geometry[1];
+    const initialHeading = this.calcBearing(startLat, startLon, nextLat, nextLon);
+
+    console.log('[DEMO_SESSION] START');
+    console.log('elapsed=0');
+    console.log('phase=GNSS_AVAILABLE');
+    console.log(
+      `[AUTHORITATIVE_POSE] source=DEMO_GNSS lat=${startLat.toFixed(6)} lon=${startLon.toFixed(6)} heading=${initialHeading.toFixed(1)}`
+    );
+
+    this.setState({
+      pose: {
+        ...this.state.pose,
+        latitude: startLat,
+        longitude: startLon,
+        heading: initialHeading,
+        speed: 18, // km/h
+      },
+      gnssStatus: 'AVAILABLE',
+      drState: 'DR_READY',
+      navigationMode: 'GNSS NAVIGATION',
+      activeBannerMessage: null,
+      isNavigating: true,
+      turnByTurnStatus: 'FOLLOWING_ROUTE',
+    });
+
+    console.log('[START_TRACE] DEMO_START');
+    demoTrajectorySimulator.startDemoNavigation(route);
+    console.log('[START_TRACE] TIMER_STARTED');
+  }
+
+  /**
+   * Called by simulator ONCE at t=20s — GNSS outage begins.
+   * Anchors DR origin at the last valid pose, transitions to DR_ACTIVE.
+   */
+  private handleDemoOutageBegin(lastFix: LocationFix): void {
+    console.log(`[DEMO] handleDemoOutageBegin lat=${lastFix.latitude.toFixed(6)} lon=${lastFix.longitude.toFixed(6)}`);
+
+    // IMPORTANT: reset DR origin exactly ONCE from this last valid GNSS pose
+    deadReckoningEngine.resetOrigin(
+      lastFix.latitude,
+      lastFix.longitude,
+      lastFix.bearing ?? (this.state.pose.heading || 0),
+      lastFix.speed ?? 5.0,
+      Date.now()
+    );
+
+    // Clear physical signal-loss timer — demo owns GNSS state
+    this.clearSignalLossTimer();
+
+    this.setState({
+      gnssStatus: 'SIGNAL_LOST',
+      drState: 'DR_ACTIVE',
+      navigationMode: 'DEAD RECKONING ACTIVE',
+      activeBannerMessage: 'GNSS UNAVAILABLE • INERTIAL DEAD RECKONING ACTIVE',
+      // Snapshot last known position
+      lastKnownGnssPose: { ...this.state.pose },
+    });
+  }
+
+  /**
+   * Called by simulator ONCE at t=50s — GNSS recovery begins.
+   * Reconciles DR estimate with recovered GNSS fix (no teleport).
+   */
+  private handleDemoRecovery(firstFix: LocationFix): void {
+    console.log(`[DEMO] handleDemoRecovery lat=${firstFix.latitude.toFixed(6)} lon=${firstFix.longitude.toFixed(6)}`);
+
+    this.setState({
+      gnssStatus: 'AVAILABLE',
+      drState: 'DR_READY',
+      navigationMode: 'GNSS NAVIGATION',
+      activeBannerMessage: 'GNSS RECOVERED • RE-ALIGNED',
+    });
+
+    // Feed the recovery fix through the normal GNSS pipeline for smooth reconciliation
+    this.handleLocationFix(firstFix);
+  }
+
+  /** Geographic bearing between two points, degrees [0, 360) */
+  private calcBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const phi1 = toRad(lat1);
+    const phi2 = toRad(lat2);
+    const dLon = toRad(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(phi2);
+    const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+    return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+  }
+
   public clearRoute(): void {
     routeNavigationEngine.reset();
     this.setState({
@@ -346,6 +550,7 @@ export class NavigationService {
       distanceToDestinationMeters: undefined,
     });
   }
+
 
   public startTurnByTurnNavigation(): void {
     if (!this.state.route) return;
@@ -404,7 +609,10 @@ export class NavigationService {
     const now = Date.now();
     this.lastFixTimestamp = now;
     this.updateRateCounter++;
-    this.resetSignalLossTimer();
+    // During demo session, the simulator owns GNSS state. Don't arm the physical timer.
+    if (!this.isDemoSessionActive) {
+      this.resetSignalLossTimer();
+    }
 
     // 1. Process raw fix through GnssFilter
     const filteredPose = this.gnssFilter.processFix(fix);
@@ -476,17 +684,9 @@ export class NavigationService {
     let updatedIdrTrajectory = this.state.idrTrajectory;
 
     if (!isOutage) {
-      // GNSS Active / Recovering: Update DR Engine Origin with authoritative GNSS fix
-      deadReckoningEngine.resetOrigin(
-        filteredPose.latitude,
-        filteredPose.longitude,
-        headingEstimate.valid && headingEstimate.headingDeg !== null ? headingEstimate.headingDeg : 0,
-        speedEstimate.valid && speedEstimate.speedMps !== null ? speedEstimate.speedMps : 0,
-        fix.timestamp
-      );
       currentDrState = 'DR_READY';
     } else {
-      // GNSS Outage: Transition to DR_ACTIVE if eligible
+      // GNSS Outage: Transition to DR_ACTIVE ONCE
       if (currentDrState !== 'DR_ACTIVE') {
         const originLat = gnssNavState.lastKnownPosition?.latitude || filteredPose.latitude;
         const originLon = gnssNavState.lastKnownPosition?.longitude || filteredPose.longitude;
@@ -537,10 +737,14 @@ export class NavigationService {
       ? `GNSS RECOVERING (${gnssNavState.recoveryFixCount}/3 fixes)...`
       : null;
 
+    if (currentDrState === 'DR_ACTIVE') {
+      currentPose = this.state.pose;
+    }
+
     const tbtUpdates = this.updateTurnByTurnProgress({
-      latitude: filteredPose.latitude,
-      longitude: filteredPose.longitude,
-      heading: headingEstimate.valid ? headingEstimate.headingDeg : null,
+      latitude: currentPose.latitude,
+      longitude: currentPose.longitude,
+      heading: currentPose.heading,
     });
 
     this.setState({
@@ -703,6 +907,10 @@ export class NavigationService {
   private startStaleTicker(): void {
     this.staleFixTicker = setInterval(() => {
       if (this.state.isNavigating) {
+        // During an active demo session, the simulator manages GNSS state deterministically.
+        // The physical stale-fix ticker must NOT override it.
+        if (this.isDemoSessionActive) return;
+
         if (this.lastFixTimestamp === 0) {
           this.setState({
             diagnostics: {
@@ -780,6 +988,7 @@ export class NavigationService {
       }
     }, 500);
   }
+
 
   /**
    * Real Hz update rate calculator
@@ -925,4 +1134,72 @@ export class NavigationService {
       filteredLongitude: filteredPose ? filteredPose.longitude : null,
     };
   }
+
+  /**
+   * Demo Flow helper: Trigger simulated GNSS Outage for Shot Sequence Step 5 & 6
+   */
+  public triggerSimulatedOutage(outage: boolean = true): void {
+    if (outage) {
+      deadReckoningEngine.resetOrigin(
+        this.state.pose.latitude,
+        this.state.pose.longitude,
+        this.state.pose.heading || 0,
+        ((this.state.pose.speed || 30) / 3.6),
+        Date.now()
+      );
+      this.setState({
+        gnssStatus: 'SIGNAL_LOST',
+        drState: 'DR_ACTIVE',
+        navigationMode: 'DEAD RECKONING ACTIVE',
+        activeBannerMessage: 'GNSS DENIED • AI DEAD RECKONING ACTIVE (~50m Deflection Model)',
+      });
+    } else {
+      this.setState({
+        gnssStatus: 'AVAILABLE',
+        drState: 'DR_READY',
+        navigationMode: 'GNSS NAVIGATION',
+        activeBannerMessage: 'GNSS RECOVERED • RE-ALIGNED',
+      });
+    }
+  }
+
+  /**
+   * Demo Flow helper: Set shot sequence step 1..8
+   */
+  public triggerDemoSequenceStep(step: number): void {
+    switch (step) {
+      case 1:
+        this.setState({
+          gnssStatus: 'AVAILABLE',
+          drState: 'DR_READY',
+          navigationMode: 'GNSS NAVIGATION',
+          activeBannerMessage: 'Step 1: Search real destination',
+        });
+        break;
+      case 2:
+        this.setState({
+          activeBannerMessage: 'Step 2: Offline route generated',
+        });
+        break;
+      case 3:
+      case 4:
+        this.setState({
+          gnssStatus: 'AVAILABLE',
+          drState: 'DR_READY',
+          navigationMode: 'GNSS NAVIGATION',
+          activeBannerMessage: 'Step 3-4: GNSS Available • Vehicle Marker Moving',
+        });
+        break;
+      case 5:
+      case 6:
+      case 7:
+        this.triggerSimulatedOutage(true);
+        break;
+      case 8:
+        this.triggerSimulatedOutage(false);
+        break;
+    }
+  }
 }
+
+export const navigationService = new NavigationService();

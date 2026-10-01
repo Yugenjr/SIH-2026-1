@@ -4,10 +4,10 @@
   "name": "Coimbatore Regional",
   "version": "2.0.0",
   "bounds": {
-    "south": 10.8,
-    "west": 76.9,
-    "north": 11.05,
-    "east": 77.1
+    "south": 10.75,
+    "west": 76.80,
+    "north": 11.10,
+    "east": 77.20
   },
   "roadCount": 28700,
   "segmentCount": 131919,

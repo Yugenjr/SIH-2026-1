@@ -5,20 +5,26 @@ import { useAppTheme } from '../../theme/ThemeContext';
 import { mapStyleService } from '../../services/map/MapStyleService';
 import { VehicleMarker } from './VehicleMarker';
 import { DestinationMarker } from './DestinationMarker';
-import { RoutePolylineLayer } from './RoutePolylineLayer';
 import { MapControls } from './MapControls';
-import { useSmoothMarker } from '../../hooks/useSmoothMarker';
+import { useLiveMarker } from '../../hooks/useLiveMarker';
 import { calculateHaversineDistance } from '../../utils/geo';
 
-// Conditionally import MapLibre for native platform safety
-let MapLibre: any = null;
+// MapLibre v11 components — imported directly to ensure correct API usage
+// v11 exports: Map, Camera, GeoJSONSource, Layer, Marker (NOT MapView/ShapeSource/LineLayer/PointAnnotation)
+let MapLibreMap: any = null;
+let MapLibreCamera: any = null;
+let MapLibreGeoJSONSource: any = null;
+let MapLibreLayer: any = null;
+let MapLibreMarker: any = null;
 try {
-  MapLibre = require('@maplibre/maplibre-react-native');
-  if (MapLibre && MapLibre.setAccessToken) {
-    MapLibre.setAccessToken(null); // MapLibre vector tiles use open styles
-  }
+  const ML = require('@maplibre/maplibre-react-native');
+  MapLibreMap = ML.Map;
+  MapLibreCamera = ML.Camera;
+  MapLibreGeoJSONSource = ML.GeoJSONSource;
+  MapLibreLayer = ML.Layer;
+  MapLibreMarker = ML.Marker;
 } catch (e) {
-  MapLibre = null;
+  // MapLibre not available (web/fallback)
 }
 
 export type CameraFollowState = 'FOLLOWING' | 'USER_INTERACTED';
@@ -50,34 +56,49 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   const cameraRef = useRef<any>(null);
   const lastCamLatRef = useRef<number>(0);
   const lastCamLonRef = useRef<number>(0);
+  // Camera follow throttle: only send flyTo at most every 500ms during navigation
+  const lastCamUpdateRef = useRef<number>(0);
   const isDenied = gnssStatus === 'DENIED';
 
-  // Smooth Marker Animation Hook (Stage C.1 Source of Truth)
-  const { animatedLat, animatedLon, animatedHeading } = useSmoothMarker(pose);
+  // Live Marker Hook — passes pose directly at 10 Hz during navigation (no lag-inducing animation window)
+  const { lat: markerLat, lon: markerLon, heading: markerHeading } = useLiveMarker(pose, isNavigating);
 
   // Position validity check for safety (prevents camera jumps to [0,0] or null)
   const hasValidPosition = Boolean(
-    animatedLat &&
-    animatedLon &&
-    Number.isFinite(animatedLat) &&
-    Number.isFinite(animatedLon) &&
-    (animatedLat !== 0 || animatedLon !== 0)
+    markerLat &&
+    markerLon &&
+    Number.isFinite(markerLat) &&
+    Number.isFinite(markerLon) &&
+    (markerLat !== 0 || markerLon !== 0)
   );
 
   const styleUrl = mapStyleService.getStyleUrlForTheme(isDark);
 
-  const MapComponent = MapLibre ? (MapLibre.Map || MapLibre.MapView) : null;
-  const CameraComponent = MapLibre ? MapLibre.Camera : null;
-  const SourceComponent = MapLibre ? (MapLibre.GeoJSONSource || MapLibre.ShapeSource) : null;
-  const LineLayerComponent = MapLibre ? MapLibre.LineLayer : null;
-  const MarkerComponent = MapLibre ? (MapLibre.Marker || MapLibre.PointAnnotation) : null;
+  // MapLibre v11 correct component references
+  const MapComponent = MapLibreMap;
+  const CameraComponent = MapLibreCamera;
+  const SourceComponent = MapLibreGeoJSONSource;  // uses `data` prop
+  const LayerComponent = MapLibreLayer;           // uses type="line" + paint prop
+  const MarkerComponent = MapLibreMarker;         // uses lngLat prop only
 
   const isNativeMapSupported = Platform.OS !== 'web' && MapComponent != null;
 
-  // Re-enable camera follow when navigation starts
+  // When user taps Start Navigation (isNavigating transitions to true),
+  // zoom/fly camera ONCE to the vehicle navigation position.
   useEffect(() => {
-    if (isNavigating) {
+    if (isNavigating && markerLat && markerLon && cameraRef.current) {
       setCameraState('FOLLOWING');
+      lastCamLatRef.current = markerLat;
+      lastCamLonRef.current = markerLon;
+      lastCamUpdateRef.current = Date.now();
+
+      if (typeof cameraRef.current.flyTo === 'function') {
+        cameraRef.current.flyTo({
+          center: [markerLon, markerLat] as [number, number],
+          zoom: 16.5,
+          duration: 800,
+        });
+      }
     }
   }, [isNavigating]);
 
@@ -85,97 +106,103 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
   useEffect(() => {
     if (destination && destination.latitude && destination.longitude && cameraRef.current && !route) {
       setCameraState('USER_INTERACTED');
+      // MapLibre v11 Camera.flyTo: { center: LngLat, zoom, duration }
       if (typeof cameraRef.current.flyTo === 'function') {
         cameraRef.current.flyTo({
           center: [destination.longitude, destination.latitude],
-          centerCoordinate: [destination.longitude, destination.latitude],
           zoom: 15.0,
-          zoomLevel: 15.0,
           duration: 800,
         });
-      } else if (typeof cameraRef.current.setStop === 'function') {
-        cameraRef.current.setStop({
-          centerCoordinate: [destination.longitude, destination.latitude],
-          zoomLevel: 15.0,
+      } else if (typeof cameraRef.current.easeTo === 'function') {
+        cameraRef.current.easeTo({
+          center: [destination.longitude, destination.latitude],
+          zoom: 15.0,
           duration: 800,
         });
       }
     }
   }, [destination?.id, destination?.latitude, destination?.longitude]);
 
+  // Route Overview Camera Framing & Bounding Box computation
+  // IMPORTANT: deps do NOT include pose coords — route bounds are stable, computed once.
+  const routeCenterAndZoom = useMemo(() => {
+    if (!route || !route.geometry || route.geometry.length < 2) return null;
+    let minLat = route.geometry[0][1];
+    let maxLat = route.geometry[0][1];
+    let minLon = route.geometry[0][0];
+    let maxLon = route.geometry[0][0];
+
+    for (const [lon, lat] of route.geometry) {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+    }
+
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLon = (minLon + maxLon) / 2;
+    return {
+      center: [centerLon, centerLat],
+      zoom: 13.5,
+      bounds: { minLat, maxLat, minLon, maxLon },
+    };
+  }, [route?.id]);
+
   // Route Overview Camera Framing Effect: Fit bounds to include vehicle position, route geometry, and destination
   useEffect(() => {
-    if (route && route.geometry && route.geometry.length >= 2 && cameraRef.current) {
-      let minLat = pose.latitude || route.geometry[0][1];
-      let maxLat = pose.latitude || route.geometry[0][1];
-      let minLon = pose.longitude || route.geometry[0][0];
-      let maxLon = pose.longitude || route.geometry[0][0];
-
-      for (const [lon, lat] of route.geometry) {
-        if (lat < minLat) minLat = lat;
-        if (lat > maxLat) maxLat = lat;
-        if (lon < minLon) minLon = lon;
-        if (lon > maxLon) maxLon = lon;
-      }
-
-      setCameraState('USER_INTERACTED');
-
+    if (route && routeCenterAndZoom && cameraRef.current) {
+      const { bounds, center, zoom } = routeCenterAndZoom;
+      // MapLibre v11 Camera.fitBounds: (bounds: [west, south, east, north], options?)
       if (typeof cameraRef.current.fitBounds === 'function') {
         cameraRef.current.fitBounds(
-          [maxLon, maxLat],
-          [minLon, minLat],
-          [100, 40, 140, 40],
-          800
+          [bounds.minLon, bounds.minLat, bounds.maxLon, bounds.maxLat],
+          { padding: { top: 100, right: 40, bottom: 140, left: 40 }, duration: 800 }
         );
-      } else if (typeof cameraRef.current.setStop === 'function') {
-        cameraRef.current.setStop({
-          bounds: {
-            ne: [maxLon, maxLat],
-            sw: [minLon, minLat],
-            paddingTop: 100,
-            paddingBottom: 140,
-            paddingLeft: 40,
-            paddingRight: 40,
-          },
+      } else if (typeof cameraRef.current.flyTo === 'function') {
+        cameraRef.current.flyTo({
+          center: center as [number, number],
+          zoom,
           duration: 800,
         });
       }
     }
-  }, [route?.id]);
+  }, [route?.id, routeCenterAndZoom]);
 
-  // C.2 Real-Time Camera Follow Effect: Track C.1 smoothed vehicle position [animatedLon, animatedLat]
+  // Real-time camera follow effect — runs ONLY during active turn-by-turn navigation
   useEffect(() => {
-    if (cameraState === 'FOLLOWING' && animatedLat && animatedLon && cameraRef.current) {
-      const dist = calculateHaversineDistance(
-        lastCamLatRef.current,
-        lastCamLonRef.current,
-        animatedLat,
-        animatedLon
-      );
+    if (!isNavigating || cameraState !== 'FOLLOWING' || !markerLat || !markerLon || !cameraRef.current) return;
 
-      // Issue smooth camera update only when displacement > 0.3m (prevents command overload & jitter)
-      if (dist > 0.3 || lastCamLatRef.current === 0) {
-        lastCamLatRef.current = animatedLat;
-        lastCamLonRef.current = animatedLon;
+    const now = Date.now();
+    // Throttle camera follow updates to 2 Hz (500ms) during active navigation
+    if (now - lastCamUpdateRef.current < 500) return;
 
-        if (typeof cameraRef.current.flyTo === 'function') {
-          cameraRef.current.flyTo({
-            center: [animatedLon, animatedLat],
-            centerCoordinate: [animatedLon, animatedLat],
-            zoom: zoomLevel,
-            zoomLevel: zoomLevel,
-            duration: 350,
-          });
-        } else if (typeof cameraRef.current.setStop === 'function') {
-          cameraRef.current.setStop({
-            centerCoordinate: [animatedLon, animatedLat],
-            zoomLevel: zoomLevel,
-            duration: 350,
-          });
-        }
+    const dist = calculateHaversineDistance(
+      lastCamLatRef.current,
+      lastCamLonRef.current,
+      markerLat,
+      markerLon
+    );
+
+    if (dist > 0.5 || lastCamLatRef.current === 0) {
+      lastCamLatRef.current = markerLat;
+      lastCamLonRef.current = markerLon;
+      lastCamUpdateRef.current = now;
+
+      if (typeof cameraRef.current.flyTo === 'function') {
+        cameraRef.current.flyTo({
+          center: [markerLon, markerLat] as [number, number],
+          zoom: 16.5,
+          duration: 450,
+        });
+      } else if (typeof cameraRef.current.easeTo === 'function') {
+        cameraRef.current.easeTo({
+          center: [markerLon, markerLat] as [number, number],
+          zoom: 16.5,
+          duration: 450,
+        });
       }
     }
-  }, [animatedLat, animatedLon, cameraState, zoomLevel]);
+  }, [markerLat, markerLon, cameraState, isNavigating]);
 
   // Transform GNSS trajectory points into GeoJSON LineString feature
   const gnssGeoJson = useMemo(() => {
@@ -215,15 +242,37 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
     };
   }, [idrPoints]);
 
+  // Transform offline route geometry points into GeoJSON LineString feature for Native MapLibre
+  // IMPORTANT: deps do NOT include pose coords — route GeoJSON is stable once calculated.
+  // Recreating it on every pose update (10 Hz) would re-upload geometry to MapLibre every 100ms.
+  const routeGeoJson = useMemo(() => {
+    if (!route || !route.geometry || route.geometry.length < 2) return null;
+    const first = route.geometry[0];
+    const last = route.geometry[route.geometry.length - 1];
+    console.log(`[ROUTE] start=[${first[1].toFixed(6)}, ${first[0].toFixed(6)}] end=[${last[1].toFixed(6)}, ${last[0].toFixed(6)}] points=${route.geometry.length}`);
+    return {
+      type: 'FeatureCollection' as const,
+      features: [
+        {
+          type: 'Feature' as const,
+          properties: {},
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: route.geometry,
+          },
+        },
+      ],
+    };
+  }, [route?.id]);
+
   // Handle Zoom & Recenter Actions
   const handleZoomIn = () => {
     setZoomLevel((prevZoom) => {
       const nextZ = Math.min(Math.round((prevZoom + 1.0) * 10) / 10, 19.0);
       if (cameraRef.current) {
         if (typeof cameraRef.current.zoomTo === 'function') {
-          cameraRef.current.zoomTo(nextZ, 250);
-        } else if (typeof cameraRef.current.setStop === 'function') {
-          cameraRef.current.setStop({ zoomLevel: nextZ, zoom: nextZ, duration: 250 });
+          // MapLibre v11: zoomTo(zoom, options?)
+          cameraRef.current.zoomTo(nextZ, { duration: 250 });
         }
       }
       return nextZ;
@@ -235,9 +284,7 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
       const nextZ = Math.max(Math.round((prevZoom - 1.0) * 10) / 10, 10.0);
       if (cameraRef.current) {
         if (typeof cameraRef.current.zoomTo === 'function') {
-          cameraRef.current.zoomTo(nextZ, 250);
-        } else if (typeof cameraRef.current.setStop === 'function') {
-          cameraRef.current.setStop({ zoomLevel: nextZ, zoom: nextZ, duration: 250 });
+          cameraRef.current.zoomTo(nextZ, { duration: 250 });
         }
       }
       return nextZ;
@@ -248,23 +295,23 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
     if (!hasValidPosition || !cameraRef.current) return;
 
     // Reset displacement reference so subsequent camera follow updates proceed cleanly
-    lastCamLatRef.current = animatedLat;
-    lastCamLonRef.current = animatedLon;
+    lastCamLatRef.current = markerLat;
+    lastCamLonRef.current = markerLon;
+    lastCamUpdateRef.current = 0;
 
     setCameraState('FOLLOWING');
 
+    // MapLibre v11: flyTo({ center: LngLat, zoom, duration })
     if (typeof cameraRef.current.flyTo === 'function') {
       cameraRef.current.flyTo({
-        center: [animatedLon, animatedLat],
-        centerCoordinate: [animatedLon, animatedLat],
+        center: [markerLon, markerLat] as [number, number],
         zoom: zoomLevel,
-        zoomLevel: zoomLevel,
         duration: 400,
       });
-    } else if (typeof cameraRef.current.setStop === 'function') {
-      cameraRef.current.setStop({
-        centerCoordinate: [animatedLon, animatedLat],
-        zoomLevel: zoomLevel,
+    } else if (typeof cameraRef.current.easeTo === 'function') {
+      cameraRef.current.easeTo({
+        center: [markerLon, markerLat] as [number, number],
+        zoom: zoomLevel,
         duration: 400,
       });
     }
@@ -277,96 +324,119 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
         <MapComponent
           style={styles.mapView}
           mapStyle={styleUrl}
-          styleURL={styleUrl}
-          logoEnabled={false}
-          attributionEnabled={false}
-          compassEnabled={false}
-          scrollEnabled={true}
-          zoomEnabled={true}
-          rotateEnabled={true}
-          pitchEnabled={true}
-          onRegionWillChange={(feature: any) => {
-            if (feature?.properties?.isUserAction) {
-              if (cameraState === 'FOLLOWING') {
-                setCameraState('USER_INTERACTED');
-              }
+          logo={false}
+          attribution={false}
+          compass={false}
+          dragPan={true}
+          touchZoom={true}
+          touchRotate={true}
+          touchPitch={true}
+          onRegionWillChange={(event: any) => {
+            // MapLibre v11: userInteraction is in event.nativeEvent
+            const isUser = event?.nativeEvent?.userInteraction ?? event?.userInteraction;
+            if (isUser && cameraState === 'FOLLOWING') {
+              setCameraState('USER_INTERACTED');
             }
           }}
-          onRegionIsChanging={(feature: any) => {
-            if (feature?.properties?.isUserAction) {
-              if (cameraState === 'FOLLOWING') {
-                setCameraState('USER_INTERACTED');
-              }
+          onRegionIsChanging={(event: any) => {
+            const isUser = event?.nativeEvent?.userInteraction ?? event?.userInteraction;
+            if (isUser && cameraState === 'FOLLOWING') {
+              setCameraState('USER_INTERACTED');
             }
           }}
         >
           {CameraComponent && (
+            // MapLibre v11 Camera: initial mount-time position only.
+            // All subsequent movement is driven imperatively via cameraRef.current.flyTo().
+            // Reactive pose props are intentionally REMOVED to prevent dual animation.
             <CameraComponent
               ref={cameraRef}
-              zoom={zoomLevel}
-              zoomLevel={zoomLevel}
-              center={[pose.longitude, pose.latitude]}
-              centerCoordinate={[pose.longitude, pose.latitude]}
-              heading={pose.heading || 0}
-              pitch={35}
-              animationMode="flyTo"
-              animationDuration={300}
+              center={[77.0705, 10.8281] as [number, number]}
+              zoom={14}
+              bearing={0}
+              pitch={0}
             />
           )}
 
-          {/* Offline OSM Route Polyline Layer */}
-          {route && MapLibre && (
-            <RoutePolylineLayer route={route} MapLibre={MapLibre} />
+          {/* Offline A* Route Polyline — MapLibre v11 correct API */}
+          {/* GeoJSONSource uses `data` prop; Layer uses type="line" + paint prop; no belowLayerID */}
+          {routeGeoJson && SourceComponent && LayerComponent && (
+            <SourceComponent id="routePolylineSource" data={routeGeoJson}>
+              {/* Casing (outer dark blue border) */}
+              <LayerComponent
+                id="routePolylineCasing"
+                type="line"
+                paint={{
+                  'line-color': isDark ? '#0284C7' : '#1D4ED8',
+                  'line-width': 10,
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                  'line-opacity': 0.9,
+                }}
+              />
+              {/* Primary bright cyan line on top */}
+              <LayerComponent
+                id="routePolylinePrimary"
+                type="line"
+                paint={{
+                  'line-color': '#00F0FF',
+                  'line-width': 6,
+                  'line-cap': 'round',
+                  'line-join': 'round',
+                  'line-opacity': 1.0,
+                }}
+              />
+            </SourceComponent>
           )}
 
-          {/* GNSS Vector Path Layer */}
-          {gnssGeoJson && SourceComponent && LineLayerComponent && (
-            <SourceComponent id="gnssPathSource" shape={gnssGeoJson}>
-              <LineLayerComponent
+          {/* GNSS Vector Path Layer — MapLibre v11 API */}
+          {gnssGeoJson && SourceComponent && LayerComponent && (
+            <SourceComponent id="gnssPathSource" data={gnssGeoJson}>
+              <LayerComponent
                 id="gnssPathLayer"
-                style={{
-                  lineColor: theme.colors.gnssPath,
-                  lineWidth: 4,
-                  lineCap: 'round',
-                  lineJoin: 'round',
+                type="line"
+                paint={{
+                  'line-color': theme.colors.gnssPath,
+                  'line-width': 4,
+                  'line-cap': 'round',
+                  'line-join': 'round',
                 }}
               />
             </SourceComponent>
           )}
 
-          {/* Dead Reckoning Vector Path Layer (Dashed Orange/Cyan) */}
-          {idrGeoJson && SourceComponent && LineLayerComponent && (
-            <SourceComponent id="idrPathSource" shape={idrGeoJson}>
-              <LineLayerComponent
+          {/* Dead Reckoning Vector Path Layer (Dashed) — MapLibre v11 API */}
+          {idrGeoJson && SourceComponent && LayerComponent && (
+            <SourceComponent id="idrPathSource" data={idrGeoJson}>
+              <LayerComponent
                 id="idrPathLayer"
-                style={{
-                  lineColor: theme.colors.idrPath,
-                  lineWidth: 4,
-                  lineDasharray: [2, 2],
-                  lineCap: 'round',
-                  lineJoin: 'round',
+                type="line"
+                paint={{
+                  'line-color': theme.colors.idrPath,
+                  'line-width': 4,
+                  'line-dasharray': [2, 2],
+                  'line-cap': 'round',
+                  'line-join': 'round',
                 }}
               />
             </SourceComponent>
           )}
 
-          {/* Vehicle Position Marker */}
-          {MarkerComponent && (
+          {/* Vehicle Position Marker — MapLibre v11: lngLat prop only */}
+          {MarkerComponent && markerLon && markerLat && (
             <MarkerComponent
               id="vehicleMarkerPoint"
-              lngLat={[animatedLon, animatedLat]}
-              coordinate={[animatedLon, animatedLat]}
+              lngLat={[markerLon, markerLat] as [number, number]}
             >
-              <VehicleMarker heading={animatedHeading} isDenied={isDenied} />
+              <VehicleMarker heading={markerHeading} isDenied={isDenied} />
             </MarkerComponent>
           )}
 
-          {/* Destination Marker */}
-          {destination && MarkerComponent && (
+          {/* Destination Marker — MapLibre v11: lngLat prop only */}
+          {destination && destination.longitude && destination.latitude && MarkerComponent && (
             <MarkerComponent
               id="destinationMarkerPoint"
-              lngLat={[destination.longitude, destination.latitude]}
-              coordinate={[destination.longitude, destination.latitude]}
+              lngLat={[destination.longitude, destination.latitude] as [number, number]}
             >
               <DestinationMarker name={destination.name} />
             </MarkerComponent>
@@ -378,8 +448,13 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
           style={[styles.compassBtn, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}
           onPress={() => {
             if (cameraRef.current) {
-              if (typeof cameraRef.current.setStop === 'function') {
-                cameraRef.current.setStop({ heading: 0, duration: 300 });
+              // MapLibre v11 Camera: use flyTo with bearing=0 to reset north
+              if (typeof cameraRef.current.flyTo === 'function') {
+                cameraRef.current.flyTo({
+                  center: [markerLon || pose.longitude, markerLat || pose.latitude] as [number, number],
+                  bearing: 0,
+                  duration: 300,
+                });
               }
             }
           }}
@@ -410,19 +485,110 @@ export const NavigationMap: React.FC<NavigationMapProps> = ({
     );
   }
 
-  // Explicit Error State (NO FAKE MAP FALLBACK!)
-  return (
-    <View style={[styles.errorContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder }]}>
-      <View style={styles.errorIconBox}>
-        <Text style={styles.errorIcon}>⚠️</Text>
+  // High-Performance Leaflet / Vector Fallback View
+  let WebViewComp: any = null;
+  try {
+    WebViewComp = require('react-native-webview').WebView;
+  } catch (e) {
+    WebViewComp = null;
+  }
+
+  if (WebViewComp) {
+    const routeLatLngs = route && route.geometry && route.geometry.length >= 2
+      ? JSON.stringify(route.geometry.map(([lon, lat]) => [lat, lon]))
+      : 'null';
+
+    const destLat = destination?.latitude || null;
+    const destLon = destination?.longitude || null;
+    const destName = destination?.name ? JSON.stringify(destination.name) : '""';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          body { margin: 0; padding: 0; background: ${isDark ? '#0B0F19' : '#F1F5F9'}; }
+          #map { width: 100vw; height: 100vh; }
+          .leaflet-tile { filter: ${isDark ? 'brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3)' : 'none'}; }
+          .dest-marker { background: #EF4444; border: 2px solid #FFFFFF; border-radius: 50%; width: 14px; height: 14px; box-shadow: 0 0 6px rgba(0,0,0,0.5); }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          const initialLat = ${pose.latitude || 10.8281};
+          const initialLon = ${pose.longitude || 77.0605};
+          const map = L.map('map', { zoomControl: false }).setView([initialLat, initialLon], 15);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+          // Vehicle Position Marker
+          L.circleMarker([initialLat, initialLon], {
+            radius: 9, fillColor: '${isDenied ? '#EF4444' : '#3B82F6'}', color: '#FFFFFF', weight: 3, fillOpacity: 1.0
+          }).addTo(map);
+
+          // Destination Pin Marker
+          const destLat = ${destLat};
+          const destLon = ${destLon};
+          if (destLat && destLon) {
+            L.circleMarker([destLat, destLon], {
+              radius: 10, fillColor: '#EF4444', color: '#FFFFFF', weight: 3, fillOpacity: 1.0
+            }).addTo(map).bindPopup(${destName});
+          }
+
+          // Offline A* Route Polyline Layer with [lat, lon] coordinate mapping
+          const routeCoords = ${routeLatLngs};
+          if (routeCoords && routeCoords.length >= 2) {
+            // Outer high-contrast casing line
+            L.polyline(routeCoords, {
+              color: '${isDark ? '#0369A1' : '#1D4ED8'}',
+              weight: 10,
+              opacity: 0.8,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }).addTo(map);
+
+            // Primary bright navigation route line
+            const polyline = L.polyline(routeCoords, {
+              color: '#38BDF8',
+              weight: 6,
+              opacity: 0.98,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }).addTo(map);
+
+            // Auto-frame viewport bounds to cover the complete route from start to destination
+            map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+          }
+        </script>
+      </body>
+      </html>
+    `;
+    return (
+      <View style={styles.container}>
+        <View style={styles.mapView}>
+          <WebViewComp originWhitelist={['*']} source={{ html: htmlContent }} style={{ flex: 1 }} />
+        </View>
       </View>
-      <Text style={[styles.errorTitle, { color: theme.colors.textPrimary }]}>MAP UNAVAILABLE</Text>
-      <Text style={[styles.errorDesc, { color: theme.colors.textSecondary }]}>
-        MapLibre native GL module is not loaded. Please run the native Android development APK to view real OpenStreetMap vector tiles.
-      </Text>
-      <Text style={[styles.errorSub, { color: theme.colors.textMuted }]}>
-        Coordinate: {pose.latitude.toFixed(4)}° N, {pose.longitude.toFixed(4)}° E
-      </Text>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.mapView, { backgroundColor: isDark ? '#0B0F19' : '#E2E8F0', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: theme.colors.primary, fontSize: 18, fontWeight: '900' }}>NavDR Real-Time Trajectory Engine</Text>
+        <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 6 }}>
+          Lat: {pose.latitude.toFixed(5)}° | Lon: {pose.longitude.toFixed(5)}° | Speed: {((pose.speed || 0) * 3.6).toFixed(1)} km/h
+        </Text>
+        <View style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: isDenied ? '#EF444422' : '#10B98122' }}>
+          <Text style={{ color: isDenied ? '#EF4444' : '#10B981', fontWeight: '800', fontSize: 13 }}>
+            {isDenied ? 'GNSS OUTAGE (DEAD RECKONING ACTIVE)' : 'GNSS AVAILABLE (3D LOCK)'}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 };

@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useNavigation } from '../state/NavigationContext';
+import { IMUMotionNoisePanel } from '../components/IMUMotionNoisePanel';
 
 export const SystemStatusScreen: React.FC = () => {
+
   const { state } = useNavigation();
   const { theme } = useAppTheme();
   const diag = state.diagnostics;
@@ -296,6 +298,9 @@ export const SystemStatusScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* SMARTPHONE IMU MOTION & SENSOR NOISE VISUAL PANEL */}
+      <IMUMotionNoisePanel />
+
       {/* HARDWARE SUBSYSTEMS SECTION */}
       <View
         style={[
@@ -303,6 +308,7 @@ export const SystemStatusScreen: React.FC = () => {
           { backgroundColor: theme.colors.card, borderColor: theme.colors.cardBorder },
         ]}
       >
+
         <Text style={[styles.groupTitle, { color: theme.colors.textSecondary }]}>HARDWARE SUBSYSTEMS</Text>
         <View style={[styles.ruleDivider, { backgroundColor: theme.colors.cardBorder }]} />
 

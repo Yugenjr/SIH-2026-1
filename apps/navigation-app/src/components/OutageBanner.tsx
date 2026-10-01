@@ -23,17 +23,25 @@ export const OutageBanner: React.FC<OutageBannerProps> = ({ status, outageSecond
   };
 
   const getBannerConfig = () => {
-    if (drState === 'DR_ACTIVE') {
+    if (drState === 'DR_ACTIVE' || status === 'SIGNAL_LOST') {
       return {
-        title: `INERTIAL DEAD RECKONING ACTIVE (${formatTimer(outageSeconds)})`,
+        title: `GNSS UNAVAILABLE • DR ACTIVE (${formatTimer(outageSeconds)})`,
         sub: 'Real-time phone IMU 7-State ENU Kinematic Engine propagation',
-        color: '#00E5FF',
-        bgColor: 'rgba(0, 229, 255, 0.10)',
-        borderColor: 'rgba(0, 229, 255, 0.40)',
+        color: '#EF4444',
+        bgColor: 'rgba(239, 68, 68, 0.12)',
+        borderColor: 'rgba(239, 68, 68, 0.40)',
       };
     }
 
     switch (status) {
+      case 'RECOVERING':
+        return {
+          title: 'GNSS RECOVERED',
+          sub: 'GNSS signal restored • Continuing normal navigation',
+          color: '#10B981',
+          bgColor: 'rgba(16, 185, 129, 0.12)',
+          borderColor: 'rgba(16, 185, 129, 0.40)',
+        };
       case 'WAITING':
         return {
           title: 'WAITING FOR LOCATION',
@@ -49,14 +57,6 @@ export const OutageBanner: React.FC<OutageBannerProps> = ({ status, outageSecond
           color: '#F59E0B',
           bgColor: 'rgba(245, 158, 11, 0.08)',
           borderColor: 'rgba(245, 158, 11, 0.35)',
-        };
-      case 'SIGNAL_LOST':
-        return {
-          title: `GNSS UNAVAILABLE • DR READY (${formatTimer(outageSeconds)})`,
-          sub: 'GNSS denied • Physical IMU ready for inertial propagation',
-          color: '#EF4444',
-          bgColor: 'rgba(239, 68, 68, 0.08)',
-          borderColor: 'rgba(239, 68, 68, 0.35)',
         };
       default:
         return null;

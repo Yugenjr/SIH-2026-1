@@ -14,6 +14,8 @@ interface NavigationContextType {
   clearRoute: () => void;
   startTurnByTurnNavigation: () => void;
   endTurnByTurnNavigation: () => void;
+  /** Starts the deterministic demo navigation session — called from "Start Navigation" button */
+  startDemoNavigation: () => Promise<void>;
   service: NavigationService;
 }
 
@@ -33,7 +35,13 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const value: NavigationContextType = {
     state: navState,
-    startNavigation: () => navigationServiceInstance.startNavigation(),
+    startNavigation: async () => {
+      if (navigationServiceInstance.getState().route) {
+        await navigationServiceInstance.startDemoNavigation();
+      } else {
+        await navigationServiceInstance.startNavigation();
+      }
+    },
     stopNavigation: () => navigationServiceInstance.stopNavigation(),
     setActiveTab: (tab: ActiveTab) => navigationServiceInstance.setActiveTab(tab),
     setDestination: (dest: Destination | null) => navigationServiceInstance.setDestination(dest),
@@ -42,6 +50,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     clearRoute: () => navigationServiceInstance.clearRoute(),
     startTurnByTurnNavigation: () => navigationServiceInstance.startTurnByTurnNavigation(),
     endTurnByTurnNavigation: () => navigationServiceInstance.endTurnByTurnNavigation(),
+    startDemoNavigation: () => navigationServiceInstance.startDemoNavigation(),
     service: navigationServiceInstance,
   };
 

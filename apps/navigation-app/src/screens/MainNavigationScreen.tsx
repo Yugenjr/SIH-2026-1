@@ -20,7 +20,9 @@ export const MainNavigationScreen: React.FC = () => {
     clearDestination,
     calculateRoute,
     clearRoute,
+    startTurnByTurnNavigation,
     endTurnByTurnNavigation,
+    startDemoNavigation,
   } = useNavigation();
   const { theme } = useAppTheme();
 
@@ -85,9 +87,22 @@ export const MainNavigationScreen: React.FC = () => {
     endTurnByTurnNavigation();
   };
 
+  /**
+   * Called when user taps "Start Navigation".
+   * This is the ONLY trigger for the demo trajectory lifecycle.
+   * The route must already be computed (calculateRoute runs on destination select).
+   */
   const handleStartNavigationIntent = async () => {
-    if (state.destination) {
+    console.log('[START_TRACE] UI_CALLBACK');
+    console.log('[DEMO_SESSION] START_REQUEST');
+    if (state.destination && state.route) {
+      await startDemoNavigation();
+    } else if (state.destination && !state.route) {
+      // Route not yet ready — calculate first then start
       await calculateRoute();
+      await startDemoNavigation();
+    } else {
+      await startDemoNavigation();
     }
   };
 
@@ -98,8 +113,12 @@ export const MainNavigationScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Compact Header Bar */}
-      <TopBar status={state.gnssStatus} />
+      {/* Compact Header Bar with In-Place Status */}
+      <TopBar
+        status={state.gnssStatus}
+        drState={state.drState}
+        outageSeconds={state.outageDurationSeconds}
+      />
 
       {/* GNSS Outage / Status Mode Banner */}
       <OutageBanner

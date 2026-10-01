@@ -9,7 +9,7 @@ interface TelemetryPanelProps {
 }
 
 export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
-  const { startNavigation, stopNavigation } = useNavigation();
+  const { startNavigation, startDemoNavigation, stopNavigation } = useNavigation();
   const { theme } = useAppTheme();
 
   const isNavigating = navState.isNavigating;
@@ -85,7 +85,11 @@ export const TelemetryPanel: React.FC<TelemetryPanelProps> = ({ navState }) => {
         {!isNavigating ? (
           <TouchableOpacity
             style={[styles.startBtn, { backgroundColor: theme.colors.primary }]}
-            onPress={startNavigation}
+            onPress={() => {
+              console.log('[START_TRACE] TELEMETRY_PANEL_UI_CALLBACK');
+              console.log('[DEMO_SESSION] START_REQUEST');
+              startDemoNavigation();
+            }}
             activeOpacity={0.85}
           >
             <Text style={styles.startBtnText}>START NAVIGATION</Text>

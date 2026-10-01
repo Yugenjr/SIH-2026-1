@@ -1,5 +1,6 @@
 import { RoadNetworkProvider, RoadSegment } from './RoadNetworkProvider';
 import { TiledOfflineOsmRoadNetworkProvider } from './TiledOfflineOsmRoadNetworkProvider';
+import { offlineOsmRoadNetworkProvider } from './OfflineOsmRoadNetworkProvider';
 import { OfflineMapManifest, OfflineRegionBounds } from '../../types/navigation';
 
 declare const require: any;
@@ -294,7 +295,18 @@ export class OfflineMapManager implements RoadNetworkProvider {
     // 2. Format v2 (Tiled Provider) delegate
     const tiledProvider = this.loadedTiledProviders.get(activeRegion.id);
     if (tiledProvider) {
-      return tiledProvider.getCandidates(latitude, longitude, radiusMeters);
+      const tiledCandidates = await tiledProvider.getCandidates(latitude, longitude, radiusMeters);
+      if (tiledCandidates && tiledCandidates.length > 0) {
+        return tiledCandidates;
+      }
+    }
+
+    // 3. Fallback to monolithic OfflineOsmRoadNetworkProvider
+    if (offlineOsmRoadNetworkProvider.isAvailable()) {
+      const fallbackCandidates = await offlineOsmRoadNetworkProvider.getCandidates(latitude, longitude, radiusMeters);
+      if (fallbackCandidates && fallbackCandidates.length > 0) {
+        return fallbackCandidates;
+      }
     }
 
     // 3. Format v1 (Legacy Monolithic) candidate lookup

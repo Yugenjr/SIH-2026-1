@@ -107,9 +107,7 @@ export const DestinationPreviewCard: React.FC<DestinationPreviewCardProps> = ({
               <Text style={styles.startBtnText}>CALCULATING ROUTE...</Text>
             </View>
           ) : (
-            <Text style={styles.startBtnText}>
-              {routeStatus === 'READY' ? 'ROUTE READY' : 'START NAVIGATION'}
-            </Text>
+            <Text style={styles.startBtnText}>START NAVIGATION</Text>
           )}
         </TouchableOpacity>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../state/NavigationContext';
@@ -15,6 +15,10 @@ export const AppNavigator: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const insets = useSafeAreaInsets();
 
+  const handleFinishSplash = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   return (
     <View style={[styles.rootContainer, { backgroundColor: theme.colors.background }]}>
       <StatusBar
@@ -24,7 +28,7 @@ export const AppNavigator: React.FC = () => {
       />
 
       {showSplash ? (
-        <SplashScreen onFinish={() => setShowSplash(false)} />
+        <SplashScreen onFinish={handleFinishSplash} />
       ) : (
         <View style={[styles.mainWrapper, { paddingTop: insets.top, backgroundColor: theme.colors.surfaceHeader }]}>
           {/* Main Active Screen */}

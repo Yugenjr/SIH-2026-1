@@ -87,3 +87,5 @@ stage_*.md
 apps/navigation-app/src/**/*.js
 
 
+
+*.apk

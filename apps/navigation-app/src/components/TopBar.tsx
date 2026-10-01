@@ -6,20 +6,47 @@ import { GnssStatus } from '../types/navigation';
 
 interface TopBarProps {
   status: GnssStatus;
+  drState?: 'DR_INACTIVE' | 'DR_READY' | 'DR_ACTIVE';
+  outageSeconds?: number;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ status }) => {
+export const TopBar: React.FC<TopBarProps> = ({ status, drState, outageSeconds = 0 }) => {
   const { theme } = useAppTheme();
 
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const getBadgeConfig = () => {
+    if (drState === 'DR_ACTIVE' || status === 'SIGNAL_LOST') {
+      const timerStr = outageSeconds > 0 ? ` (${formatTimer(outageSeconds)})` : '';
+      return {
+        bg: 'rgba(239, 68, 68, 0.18)',
+        border: 'rgba(239, 68, 68, 0.50)',
+        dot: '#EF4444',
+        text: '#EF4444',
+        label: `● GNSS UNAVAILABLE · DR ACTIVE${timerStr}`,
+      };
+    }
+
     switch (status) {
+      case 'RECOVERING':
+        return {
+          bg: 'rgba(16, 185, 129, 0.20)',
+          border: 'rgba(16, 185, 129, 0.60)',
+          dot: '#10B981',
+          text: '#10B981',
+          label: '● GNSS RECOVERED',
+        };
       case 'WAITING':
         return {
           bg: 'rgba(59, 130, 246, 0.12)',
           border: 'rgba(59, 130, 246, 0.35)',
           dot: '#3B82F6',
           text: '#3B82F6',
-          label: 'SEARCHING GPS',
+          label: '● SEARCHING GNSS',
         };
       case 'PERMISSION_REQUIRED':
         return {
@@ -27,15 +54,7 @@ export const TopBar: React.FC<TopBarProps> = ({ status }) => {
           border: 'rgba(245, 158, 11, 0.35)',
           dot: '#F59E0B',
           text: '#F59E0B',
-          label: 'PERM REQUIRED',
-        };
-      case 'SIGNAL_LOST':
-        return {
-          bg: 'rgba(239, 68, 68, 0.12)',
-          border: 'rgba(239, 68, 68, 0.35)',
-          dot: '#EF4444',
-          text: '#EF4444',
-          label: 'SIGNAL LOST',
+          label: '● PERM REQUIRED',
         };
       case 'AVAILABLE':
       default:
@@ -44,7 +63,7 @@ export const TopBar: React.FC<TopBarProps> = ({ status }) => {
           border: 'rgba(16, 185, 129, 0.30)',
           dot: theme.colors.gnssHealthy,
           text: theme.colors.gnssHealthy,
-          label: 'GNSS ACTIVE',
+          label: '● GNSS AVAILABLE',
         };
     }
   };
@@ -58,7 +77,7 @@ export const TopBar: React.FC<TopBarProps> = ({ status }) => {
         <Logo size={24} showText={true} />
       </View>
 
-      {/* Compact Status Pill */}
+      {/* In-Place High Visibility Status Pill */}
       <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
         <View style={[styles.statusDot, { backgroundColor: badge.dot }]} />
         <Text style={[styles.statusText, { color: badge.text }]}>{badge.label}</Text>

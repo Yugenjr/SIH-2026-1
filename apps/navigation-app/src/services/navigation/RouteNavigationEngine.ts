@@ -87,6 +87,40 @@ export class RouteNavigationEngine {
   }
 
   /**
+   * Sanitizes raw OSM way IDs and returns user-friendly road names or classifications.
+   */
+  public formatUserFriendlyRoadName(rawName?: string, roadType?: string): string | undefined {
+    if (!rawName || rawName.trim() === '') {
+      if (roadType) {
+        const typeUpper = roadType.toUpperCase();
+        if (typeUpper.includes('PRIMARY')) return 'Primary Road';
+        if (typeUpper.includes('SECONDARY')) return 'Secondary Road';
+        if (typeUpper.includes('TERTIARY')) return 'Tertiary Road';
+        if (typeUpper.includes('TRUNK')) return 'Main Highway';
+        if (typeUpper.includes('RESIDENTIAL')) return 'Local Road';
+      }
+      return undefined;
+    }
+
+    const trimmed = rawName.trim();
+
+    // Never display raw OSM way IDs like "Road 658253308" or "osm_w658253308"
+    if (/^(Road\s+\d+|osm_w\d+|\d+)$/i.test(trimmed)) {
+      if (roadType) {
+        const typeUpper = roadType.toUpperCase();
+        if (typeUpper.includes('PRIMARY')) return 'Primary Road';
+        if (typeUpper.includes('SECONDARY')) return 'Secondary Road';
+        if (typeUpper.includes('TERTIARY')) return 'Tertiary Road';
+        if (typeUpper.includes('TRUNK')) return 'Main Highway';
+        if (typeUpper.includes('RESIDENTIAL')) return 'Local Road';
+      }
+      return 'unnamed road';
+    }
+
+    return trimmed;
+  }
+
+  /**
    * Evaluates turn-by-turn navigation progress for a given route and current vehicle position.
    */
   public updateProgress(
@@ -163,6 +197,7 @@ export class RouteNavigationEngine {
     let upcomingManeuverIndex = numPoints - 1;
     let upcomingManeuverType: ManeuverType = 'ARRIVE';
     let upcomingRoadName: string | undefined;
+    let upcomingRoadType: string | undefined;
 
     for (let j = closestIndex + 1; j < numPoints - 1; j++) {
       const [prevLon, prevLat] = geometry[j - 1];
@@ -185,8 +220,9 @@ export class RouteNavigationEngine {
               Math.abs(slon - currLon) < 1e-4 && Math.abs(slat - currLat) < 1e-4
             )
           );
-          if (segMatch?.name) {
+          if (segMatch) {
             upcomingRoadName = segMatch.name;
+            upcomingRoadType = segMatch.roadType;
           }
         }
         break;
@@ -213,6 +249,7 @@ export class RouteNavigationEngine {
     distToManeuver = Math.round(distToManeuver);
 
     const [juncLon, juncLat] = geometry[upcomingManeuverIndex];
+    const cleanRoadName = this.formatUserFriendlyRoadName(upcomingRoadName, upcomingRoadType);
 
     const currentInstruction: NavigationInstruction = {
       type: upcomingManeuverType,
@@ -220,9 +257,9 @@ export class RouteNavigationEngine {
       instructionText: this.formatInstructionText(
         upcomingManeuverType,
         distToManeuver,
-        upcomingRoadName
+        cleanRoadName
       ),
-      roadName: upcomingRoadName,
+      roadName: cleanRoadName,
       routeSegmentIndex: upcomingManeuverIndex,
       junctionCoordinate: { latitude: juncLat, longitude: juncLon },
     };
