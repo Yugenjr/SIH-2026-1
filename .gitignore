@@ -36,8 +36,6 @@ env.bak/
 venv.bak/
 
 # Environment Variables & Secrets
-.env
-.env.local
 .env.*.local
 *.pem
 *.key
@@ -45,7 +43,6 @@ secrets/
 
 # IDE & OS Metadata
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
@@ -89,3 +86,5 @@ apps/navigation-app/src/**/*.js
 
 
 *.apk
+config.bat
+node_modules
